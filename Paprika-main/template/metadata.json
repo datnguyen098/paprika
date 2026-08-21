@@ -1,0 +1,8 @@
+{
+  "name": "Verde Chilli",
+  "description": "A premium, warm, and highly-polished restaurant ordering app. It combines a deep rich green brand palette with energetic chili-red accents, featuring instant menu additions, local cart mechanics, interactive checkout selections, dynamic table bookings, and a mobile-optimized sticky menu bar.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

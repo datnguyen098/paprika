@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(php \"c:/Users/laoxo/Documents/Codex/2026-05-16/Paprika/artisan\" migrate --force)",
+      "Bash(php c:/Users/laoxo/Documents/Codex/2026-05-16/Paprika/artisan tinker '--execute= *)",
+      "Bash(php \"c:/Users/laoxo/Documents/Codex/2026-05-16/Paprika/artisan\" test --parallel)",
+      "Bash(php \"c:/Users/laoxo/Documents/Codex/2026-05-16/Paprika/artisan\" test)",
+      "Bash(php -r ' *)"
+    ]
+  }
+}

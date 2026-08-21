@@ -1,0 +1,48 @@
+<?php
+
+return [
+    'accepted' => ':attribute phải được chấp nhận.',
+    'after_or_equal' => ':attribute phải sau hoặc bằng :date.',
+    'array' => ':attribute phải là một danh sách.',
+    'boolean' => ':attribute phải là đúng hoặc sai.',
+    'confirmed' => ':attribute xác nhận không khớp.',
+    'date' => ':attribute chưa đúng định dạng ngày.',
+    'date_format' => ':attribute chưa đúng định dạng.',
+    'email' => ':attribute chưa đúng định dạng email.',
+    'exists' => ':attribute không hợp lệ.',
+    'file' => ':attribute phải là một tệp hợp lệ.',
+    'integer' => ':attribute phải là số nguyên.',
+    'lte' => ':attribute phải nhỏ hơn hoặc bằng :value.',
+    'max' => [
+        'array' => ':attribute không được có quá :max mục.',
+        'file' => ':attribute không được vượt quá :max KB.',
+        'numeric' => ':attribute không được lớn hơn :max.',
+        'string' => ':attribute không được dài quá :max ký tự.',
+    ],
+    'mimes' => ':attribute phải thuộc định dạng: :values.',
+    'min' => [
+        'array' => ':attribute phải có ít nhất :min mục.',
+        'file' => ':attribute phải có dung lượng tối thiểu :min KB.',
+        'numeric' => ':attribute phải lớn hơn hoặc bằng :min.',
+        'string' => ':attribute phải có ít nhất :min ký tự.',
+    ],
+    'numeric' => ':attribute phải là số.',
+    'regex' => ':attribute chưa đúng định dạng.',
+    'required' => 'Vui lòng nhập :attribute.',
+    'string' => ':attribute phải là chuỗi ký tự.',
+    'unique' => ':attribute đã được sử dụng.',
+    'uploaded' => 'Không tải được :attribute. Vui lòng chọn ảnh JPG, PNG, WEBP hoặc SVG có dung lượng tối đa 10MB.',
+
+    'attributes' => [
+        'avatar' => 'avatar',
+        'image' => 'ảnh',
+        'thumbnail' => 'ảnh thumbnail',
+        'gallery' => 'gallery',
+        'gallery.*' => 'ảnh gallery',
+        'logo_header' => 'logo header',
+        'logo_footer' => 'logo footer',
+        'favicon' => 'favicon',
+        'og_image' => 'ảnh OG',
+        'default_background' => 'ảnh nền mặc định',
+    ],
+];
