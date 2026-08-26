@@ -3,7 +3,7 @@
 .env
 .env.backup
 .env.production
-.evn.save
+.env.save
 .phpactor.json
 .phpunit.result.cache
 /.codex
