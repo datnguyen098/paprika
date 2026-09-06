@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/constants/app_colors.dart';
 import '../core/constants/app_constants.dart';
+import 'coming_soon.dart';
 
 /// Footer 4 cột theo Laravel Blade storefront (`footer.blade.php`).
 ///
@@ -33,7 +34,7 @@ class PaprikaFooter extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        color: AppColors.primaryStrong,
+        color: AppColors.footerBg,
         border: Border(
           top: BorderSide(color: AppColors.accent, width: 8),
         ),
@@ -92,7 +93,7 @@ class _HotlineBand extends StatelessWidget {
                       Text(
                         'Hotline',
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.6),
+                          color: AppColors.sage,
                           fontSize: 11,
                           fontWeight: FontWeight.w500,
                           letterSpacing: 0.1,
@@ -120,7 +121,7 @@ class _HotlineBand extends StatelessWidget {
                 child: Text(
                   PaprikaFooter._tagline,
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.6),
+                    color: AppColors.sage,
                     fontSize: 13,
                   ),
                   textAlign: isNarrow ? TextAlign.center : TextAlign.right,
@@ -243,37 +244,12 @@ class _BrandCol extends StatelessWidget {
         Text(
           PaprikaFooter._brandDesc,
           style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.7),
+            color: AppColors.sageLight,
             fontSize: 12,
             height: 1.6,
           ),
         ),
         const SizedBox(height: AppConstants.spaceMd),
-        Row(
-          children: [
-            for (final _ in ['F', 'I', 'T', 'T'])
-              Padding(
-                padding: const EdgeInsets.only(right: 6),
-                child: Container(
-                  width: 30,
-                  height: 30,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    shape: BoxShape.circle,
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    _,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
       ],
     );
   }
@@ -282,11 +258,12 @@ class _BrandCol extends StatelessWidget {
 class _ExploreCol extends StatelessWidget {
   const _ExploreCol();
 
+  // Mỗi link có feature name riêng để snackbar "đang phát triển" gợi ý rõ hơn.
   static const _links = [
-    ('Trang chủ', '/home'),
-    ('Thực đơn', '/menu'),
-    ('Giới thiệu', '/about'),
-    ('Đặt bàn', '/reservation'),
+    ('Trang chủ', '/home', null),           // null = không show snackbar (route đang ở đây)
+    ('Thực đơn', '/menu', 'Thực đơn'),
+    ('Giới thiệu', '/about', 'Giới thiệu'),
+    ('Đặt bàn', '/reservation', 'Đặt bàn'),
   ];
 
   @override
@@ -296,8 +273,14 @@ class _ExploreCol extends StatelessWidget {
       children: [
         _SectionTitle(title: PaprikaFooter._exploreTitle),
         const SizedBox(height: AppConstants.spaceMd),
-        for (final (label, route) in _links) ...[
-          _FooterLink(label: label, route: route),
+        for (final (label, route, feature) in _links) ...[
+          _FooterLink(
+            label: label,
+            route: route,
+            onTap: feature == null
+                ? null
+                : () => ComingSoon.show(context, feature: feature),
+          ),
           const SizedBox(height: AppConstants.spaceSm),
         ],
       ],
@@ -353,7 +336,7 @@ class _ServiceItem extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, color: AppColors.goldDark, size: 18),
+        Icon(icon, color: AppColors.gold, size: 18),
         const SizedBox(width: AppConstants.spaceSm),
         Expanded(
           child: Column(
@@ -373,7 +356,7 @@ class _ServiceItem extends StatelessWidget {
               Text(
                 content,
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.7),
+                  color: AppColors.sageLight,
                   fontSize: 12,
                   height: 1.4,
                 ),
@@ -395,7 +378,6 @@ class _NewsletterCol extends StatefulWidget {
 
 class _NewsletterColState extends State<_NewsletterCol> {
   final _controller = TextEditingController();
-  bool _subscribed = false;
 
   @override
   void dispose() {
@@ -404,17 +386,8 @@ class _NewsletterColState extends State<_NewsletterCol> {
   }
 
   void _submit() {
-    final email = _controller.text.trim();
-    if (email.isEmpty || !email.contains('@')) return;
-    setState(() => _subscribed = true);
-    _controller.clear();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('TODO: kết nối BE newsletter endpoint'),
-        backgroundColor: AppColors.primaryMuted,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    // Newsletter endpoint chưa có trong BE - dùng snackbar "đang phát triển".
+    ComingSoon.show(context, feature: 'Đăng ký bản tin');
   }
 
   @override
@@ -427,7 +400,7 @@ class _NewsletterColState extends State<_NewsletterCol> {
         Text(
           'Đăng ký nhận ưu đãi đặc biệt và cập nhật từ Paprika Patras.',
           style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.7),
+            color: AppColors.sageLight,
             fontSize: 12,
             height: 1.5,
           ),
@@ -467,27 +440,6 @@ class _NewsletterColState extends State<_NewsletterCol> {
           ),
           onSubmitted: (_) => _submit(),
         ),
-        if (_subscribed) ...[
-          const SizedBox(height: AppConstants.spaceSm),
-          Container(
-            padding: const EdgeInsets.all(AppConstants.spaceSm),
-            decoration: BoxDecoration(
-              color: AppColors.accent.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(AppConstants.radiusXs),
-              border: Border.all(
-                color: AppColors.accent.withValues(alpha: 0.3),
-              ),
-            ),
-            child: const Text(
-              'Đã đăng ký! Cảm ơn bạn.',
-              style: TextStyle(
-                color: AppColors.accent,
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
       ],
     );
   }
@@ -523,32 +475,51 @@ class _SectionTitle extends StatelessWidget {
 }
 
 class _FooterLink extends StatelessWidget {
-  const _FooterLink({required this.label, required this.route});
+  const _FooterLink({
+    required this.label,
+    required this.route,
+    this.onTap,
+  });
 
   final String label;
   final String route;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Icon(
-          Icons.arrow_right,
-          color: AppColors.accent,
-          size: 16,
+    final arrow = const Icon(
+      Icons.arrow_right,
+      color: AppColors.accent,
+      size: 16,
+    );
+    final text = Text(
+      label,
+      style: TextStyle(
+        color: AppColors.sageLight,
+        fontSize: 12,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.08,
+      ),
+    );
+
+    if (onTap == null) {
+      // Trang hiện tại - không cần tap.
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [arrow, const SizedBox(width: 4), text],
+      );
+    }
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(4),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [arrow, const SizedBox(width: 4), text],
         ),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.7),
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.08,
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
@@ -575,7 +546,7 @@ class _CopyrightBar extends StatelessWidget {
                 Text(
                   '© 2026 Paprika Patras. Mọi quyền được bảo lưu.',
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.35),
+                    color: AppColors.sageLight.withValues(alpha: 0.5),
                     fontSize: 11,
                   ),
                   textAlign: TextAlign.center,
@@ -590,7 +561,7 @@ class _CopyrightBar extends StatelessWidget {
               Text(
                 '© 2026 Paprika Patras. Mọi quyền được bảo lưu.',
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.35),
+                  color: AppColors.sageLight.withValues(alpha: 0.5),
                   fontSize: 11,
                 ),
               ),
@@ -610,44 +581,55 @@ class _LegalLinks extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Wrap(
-      spacing: AppConstants.spaceSm,
+      spacing: AppConstants.spaceMd,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        _LegalLink(label: 'Liên hệ'),
-        Container(
-          width: 4,
-          height: 4,
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.2),
-            shape: BoxShape.circle,
-          ),
+        _LegalLink(
+          label: 'Liên hệ',
+          onTap: () => ComingSoon.show(context, feature: 'Liên hệ'),
         ),
-        _LegalLink(label: 'Điều khoản'),
-        Container(
-          width: 4,
-          height: 4,
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.2),
-            shape: BoxShape.circle,
-          ),
+        _LegalLink(
+          label: 'Tra cứu đơn',
+          color: AppColors.accent,
+          bold: true,
+          onTap: () => ComingSoon.show(context, feature: 'Tra cứu đơn'),
         ),
-        _LegalLink(label: 'Dịch allergen'),
       ],
     );
   }
 }
 
 class _LegalLink extends StatelessWidget {
-  const _LegalLink({required this.label});
+  const _LegalLink({
+    required this.label,
+    this.color,
+    this.bold = false,
+    this.onTap,
+  });
 
   final String label;
+  final Color? color;
+  final bool bold;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      label,
-      style: TextStyle(
-        color: Colors.white.withValues(alpha: 0.35),
-        fontSize: 11,
+    final style = TextStyle(
+      color: color ?? AppColors.sageLight.withValues(alpha: 0.4),
+      fontSize: 11,
+      fontWeight: bold ? FontWeight.w800 : FontWeight.w400,
+    );
+
+    if (onTap == null) {
+      return Text(label, style: style);
+    }
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(4),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 2),
+        child: Text(label, style: style),
       ),
     );
   }
