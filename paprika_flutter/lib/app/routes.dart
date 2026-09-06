@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../screens/home_screen.dart';
+import '../screens/reservation_screen.dart';
 
 /// Định nghĩa tất cả route name & path của app.
 /// Dev FE mỗi người tự thêm route của mình vào AppRouter.
@@ -67,6 +68,11 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.splash,
         builder: (context, state) => const HomeScreen(),
+      ),
+      // Reservation — đặt bàn, có form + quick actions
+      GoRoute(
+        path: AppRoutes.reservation,
+        builder: (context, state) => const ReservationScreen(),
       ),
     ],
   );

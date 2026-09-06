@@ -38,6 +38,14 @@ class AppColors {
   static const Color textPrimary = Color(0xFF172018);
   static const Color textMuted = Color(0xFF687064);
 
+  // Footer palette - trích từ footer.blade.php Tailwind classes
+  //   #032219 (bg-[#032219])   → footerBg   - nền footer
+  //   #A2C7B4 (text-[#A2C7B4]) → sage       - hotline label + tagline
+  //   #B5CFB7 (text-[#B5CFB7]) → sageLight  - body / description / copyright
+  static const Color footerBg = Color(0xFF032219);
+  static const Color sage = Color(0xFFA2C7B4);
+  static const Color sageLight = Color(0xFFB5CFB7);
+
   // Service card phụ
   static const Color brownDeep = Color(0xFF92400E);
   static const Color brownDark = Color(0xFF78350F);
