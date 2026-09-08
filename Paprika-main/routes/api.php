@@ -39,5 +39,29 @@ Route::prefix('v1')->group(function () {
     // Dish Detail - Chi tiết món ăn (Đặt SAU các route cố định)
     Route::get('/dishes/{id}', [DishController::class, 'show'])
         ->name('api.v1.dishes.show');
-    
+
+});
+
+
+// ============================================================
+// Người 2 — Home + Branch + About + Contact (mock data inline)
+// Thêm bên dưới, KHÔNG đụng vào routes của Người 1/3 ở trên.
+// ============================================================
+
+Route::prefix('v1')->group(function () {
+
+    // Home
+    Route::get('/home', [\App\Http\Controllers\Api\HomeController::class, 'index']);
+
+    // Branches
+    Route::get('/branches',      [\App\Http\Controllers\Api\BranchController::class, 'index']);
+    Route::get('/branches/{id}', [\App\Http\Controllers\Api\BranchController::class, 'show'])
+        ->whereNumber('id');
+
+    // About
+    Route::get('/about', [\App\Http\Controllers\Api\AboutController::class, 'index']);
+
+    // Contact
+    Route::post('/contact', [\App\Http\Controllers\Api\ContactController::class, 'store']);
+
 });
