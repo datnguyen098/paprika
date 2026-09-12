@@ -1,11 +1,19 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../data/models/about_model.dart';
+import '../data/models/branch_model.dart';
 import '../data/models/category_model.dart';
+import '../data/models/contact_model.dart';
 import '../data/models/dish_model.dart';
+import '../data/models/home_model.dart';
 import '../data/models/menu_response.dart';
+import '../data/repositories/about_repository.dart';
+import '../data/repositories/branch_repository.dart';
 import '../data/repositories/category_repository.dart';
+import '../data/repositories/contact_repository.dart';
 import '../data/repositories/dish_repository.dart';
+import '../data/repositories/home_repository.dart';
 import '../services/api_service.dart';
 import '../services/storage_service.dart';
 
@@ -40,6 +48,22 @@ final dishRepositoryProvider = Provider<DishRepository>((ref) {
   return DishRepository(ref.watch(apiServiceProvider));
 });
 
+final homeRepositoryProvider = Provider<HomeRepository>((ref) {
+  return HomeRepository(ref.watch(apiServiceProvider));
+});
+
+final branchRepositoryProvider = Provider<BranchRepository>((ref) {
+  return BranchRepository(ref.watch(apiServiceProvider));
+});
+
+final aboutRepositoryProvider = Provider<AboutRepository>((ref) {
+  return AboutRepository(ref.watch(apiServiceProvider));
+});
+
+final contactRepositoryProvider = Provider<ContactRepository>((ref) {
+  return ContactRepository(ref.watch(apiServiceProvider));
+});
+
 // ============================================================
 // DATA PROVIDERS - dùng cho UI
 // ============================================================
@@ -53,6 +77,45 @@ final categoriesProvider = FutureProvider.autoDispose<List<Category>>((ref) asyn
 final featuredDishesProvider = FutureProvider.autoDispose<List<Dish>>((ref) async {
   return ref.watch(dishRepositoryProvider).getFeaturedDishes(limit: 10);
 });
+
+/// Home page data (banners, categories, featured, testimonials, posts, promo).
+final homeProvider = FutureProvider.autoDispose<HomeData>((ref) async {
+  return ref.watch(homeRepositoryProvider).getHome();
+});
+
+/// Danh sách tất cả chi nhánh active.
+final branchesProvider = FutureProvider.autoDispose<List<Branch>>((ref) async {
+  return ref.watch(branchRepositoryProvider).getBranches();
+});
+
+/// Chi tiết 1 chi nhánh theo id.
+/// Dùng `.family<int>` để cache theo id — khi gọi branchDetailProvider(id)
+/// nhiều lần cùng id, BE chỉ gọi 1 lần.
+final branchDetailProvider =
+    FutureProvider.autoDispose.family<Branch, int>((ref, id) async {
+  return ref.watch(branchRepositoryProvider).getBranch(id);
+});
+
+/// Trang Giới thiệu (about).
+final aboutProvider = FutureProvider.autoDispose<AboutData>((ref) async {
+  return ref.watch(aboutRepositoryProvider).getAbout();
+});
+
+/// Gửi form liên hệ.
+/// Dùng `.family<ContactResponse, ContactRequest>` — key là request object,
+/// nên mỗi request khác nhau sẽ gọi BE (không cache vì ContactResponse
+/// chỉ dùng 1 lần rồi show confirmation).
+///
+/// Lưu ý: nên validate bằng [ContactRequest.validate()] phía client
+/// TRƯỚC khi gọi provider này để UX tốt.
+final sendContactProvider = FutureProvider.autoDispose
+    .family<ContactResponse, ContactRequest>((ref, request) async {
+  return ref.watch(contactRepositoryProvider).submit(request);
+});
+
+// ============================================================
+// FILTER PROVIDERS
+// ============================================================
 
 /// Filter cho menu screen
 class MenuFilter {
@@ -137,6 +200,22 @@ final searchDishesProvider =
 final dishDetailProvider =
     FutureProvider.autoDispose.family<DishDetail, int>((ref, id) async {
   return ref.watch(dishRepositoryProvider).getDishDetail(id);
+});
+
+// ============================================================
+// UI STATE PROVIDERS
+// ============================================================
+
+/// Chi nhánh đang được chọn trong branch list.
+/// Dùng để highlight item khi user tap, hoặc pre-fill branch
+/// trong reservation/contact form.
+final selectedBranchIdProvider = StateProvider<int?>((ref) => null);
+
+/// Locale hiện tại (vi/en/el). Dùng cho language switcher.
+/// Khi user đổi locale, set vào storage và invalidate homeProvider
+/// để fetch lại data đúng ngôn ngữ.
+final currentLocaleProvider = StateProvider<String>((ref) {
+  return ref.watch(storageServiceProvider).getLocale() ?? 'vi';
 });
 
 // ============================================================

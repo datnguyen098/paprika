@@ -4,11 +4,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app/app.dart';
+import 'core/config/env.dart';
 import 'core/constants/app_colors.dart';
 import 'providers/providers.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Khởi tạo Env trước khi runApp để ApiConstants.baseUrl / webOrigin
+  // đã sẵn sàng khi ApiService được tạo (lazy qua Riverpod).
+  await Env.init();
 
   // Lock orientation dọc - mobile restaurant app
   await SystemChrome.setPreferredOrientations(<DeviceOrientation>[
