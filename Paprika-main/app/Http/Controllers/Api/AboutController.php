@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Page;
+use App\Models\SiteSetting;
 use Illuminate\Http\JsonResponse;
 
 class AboutController extends Controller
@@ -10,44 +12,108 @@ class AboutController extends Controller
     /**
      * GET /api/v1/about
      *
-     * Mock thuần — sau này nối DB bảng about_pages.
+     * Lấy dữ liệu từ bảng pages (slug = 'about') kết hợp
+     * site_settings cho mission / vision / team / stats.
      */
     public function index(): JsonResponse
     {
+        $page = Page::query()
+            ->where('slug', 'about')
+            ->where('is_active', true)
+            ->first();
+
+        if (! $page) {
+            // Fallback dev: chưa seed Page slug='about' thì trả data mặc định
+            // để Flutter UI không bị trắng. Khi đã seed DB, block này không chạy.
+            return response()->json([
+                'success' => true,
+                'data'    => [
+                    'id'           => null,
+                    'title'        => 'About Paprika',
+                    'subtitle'     => $this->fallbackSubtitle(),
+                    'story'        => '<p>Paprika is a Vietnamese kitchen in Patras, serving pho, banh mi, nem, fresh rolls, grilled dishes and some familiar Greek favorites.</p><p>The restaurant focuses on fresh flavors, clear service and a convenient ordering experience for dine-in, takeaway or delivery.</p>',
+                    'mission'      => $this->fallbackMission(),
+                    'vision'       => $this->fallbackVision(),
+                    'cover_image'  => null,
+                    'team_members' => [],
+                    'stats'        => [],
+                ],
+            ]);
+        }
+
+        $settings = $this->getAboutSettings();
+
         return response()->json([
             'success' => true,
             'data'    => [
-                'id'           => 1,
-                'title'        => 'Paprika Patras',
-                'subtitle'     => 'Hành trình hương vị Việt — Hy',
-                'story'        => 'Paprika Patras ra đời từ tình yêu ẩm thực của đầu bếp Việt với vùng đất Patras — nơi ông cha ta đã gieo mầm gia vị paprika trên đất Hy Lạp. Mỗi món ăn là một câu chuyện kể giữa hai nền văn hóa, từ mâm cơm gia đình Việt đến bàn tiệc mezze của biển Địa Trung Hải.',
-                'mission'      => 'Mang đến trải nghiệm ăn uống chân thật, nơi khách hàng cảm nhận được sự giao thoa giữa hương vị quê hương và tinh hoa ẩm thực thế giới.',
-                'vision'       => 'Trở thành thương hiệu nhà hàng Việt — Hy đầu tiên lan tỏa giá trị văn hóa ẩm thực từ Đông sang Tây.',
-                'cover_image'  => 'about/cover.jpg',
-                'team_members' => [
-                    [
-                        'name'   => 'Chef Nguyễn Văn A',
-                        'role'   => 'Bếp trưởng',
-                        'avatar' => 'team/a.jpg',
-                    ],
-                    [
-                        'name'   => 'Chef Maria Patras',
-                        'role'   => 'Cố vấn Hy Lạp',
-                        'avatar' => 'team/m.jpg',
-                    ],
-                    [
-                        'name'   => 'Lê Thị B',
-                        'role'   => 'Quản lý nhà hàng',
-                        'avatar' => 'team/b.jpg',
-                    ],
-                ],
-                'stats' => [
-                    ['label' => 'Chi nhánh',       'value' => 4],
-                    ['label' => 'Món trong menu',  'value' => 120],
-                    ['label' => 'Khách hàng/năm',  'value' => '120k+'],
-                    ['label' => 'Năm kinh nghiệm', 'value' => 12],
-                ],
+                'id'           => $page->id,
+                'title'        => $page->title,
+                'subtitle'     => $settings['subtitle'],
+                'story'        => $page->content,
+                'mission'      => $settings['mission'],
+                'vision'       => $settings['vision'],
+                'cover_image'  => $page->image,
+                'team_members' => $settings['team_members'],
+                'stats'        => $settings['stats'],
             ],
         ]);
+    }
+
+    /**
+     * Đọc các setting key 'about_*' và giải mã JSON cho
+     * team_members + stats. Trả về mảng rỗng nếu setting
+     * chưa được cấu hình.
+     *
+     * @return array{subtitle:?string,mission:?string,vision:?string,team_members:array<int,array<string,mixed>>,stats:array<int,array<string,mixed>>}
+     */
+    private function getAboutSettings(): array
+    {
+        $raw = SiteSetting::query()
+            ->whereIn('key', [
+                'about_subtitle',
+                'about_mission',
+                'about_vision',
+                'about_team_members',
+                'about_stats',
+            ])
+            ->pluck('value', 'key');
+
+        return [
+            'subtitle'     => $raw['about_subtitle'] ?? $this->fallbackSubtitle(),
+            'mission'      => $raw['about_mission']  ?? $this->fallbackMission(),
+            'vision'       => $raw['about_vision']   ?? $this->fallbackVision(),
+            'team_members' => $this->decodeJson($raw['about_team_members'] ?? null, []),
+            'stats'        => $this->decodeJson($raw['about_stats']        ?? null, []),
+        ];
+    }
+
+    private function fallbackSubtitle(): string
+    {
+        return 'Vietnamese kitchen in Patras';
+    }
+
+    private function fallbackMission(): string
+    {
+        return 'To bring authentic Vietnamese flavors to Patras with fresh ingredients and warm hospitality.';
+    }
+
+    private function fallbackVision(): string
+    {
+        return 'A friendly place where Vietnamese and Greek food lovers can enjoy fresh, honest cooking together.';
+    }
+
+    /**
+     * @param  array<int,array<string,mixed>>  $fallback
+     * @return array<int,array<string,mixed>>
+     */
+    private function decodeJson(?string $value, array $fallback): array
+    {
+        if ($value === null || $value === '') {
+            return $fallback;
+        }
+
+        $decoded = json_decode($value, true);
+
+        return is_array($decoded) ? $decoded : $fallback;
     }
 }

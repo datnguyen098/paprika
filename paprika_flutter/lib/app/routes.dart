@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../screens/about_screen.dart';
+import '../screens/branch_detail_screen.dart';
+import '../screens/branches_screen.dart';
+import '../screens/contact_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/reservation_screen.dart';
 
-/// Định nghĩa tất cả route name & path của app.
-/// Dev FE mỗi người tự thêm route của mình vào AppRouter.
+/// Dia nghĩa tat ca route name & path cua app.
 class AppRoutes {
   AppRoutes._();
 
@@ -28,7 +31,9 @@ class AppRoutes {
   static const String profile = '/profile';
   static const String editProfile = '/profile/edit';
   static const String addresses = '/profile/addresses';
+  static const String about = '/about';
   static const String branches = '/branches';
+  static const String branchDetail = '/branches/:id';
   static const String reservation = '/reservation';
   static const String reservations = '/reservations';
   static const String notifications = '/notifications';
@@ -38,29 +43,20 @@ class AppRoutes {
   static String dishDetailPath(int id) => '/dish/$id';
   static String orderDetailPath(int id) => '/orders/$id';
   static String orderTrackingPath(int id) => '/orders/$id/track';
+  static String branchDetailPath(int id) => '/branches/$id';
 }
 
-/// AppRouter — placeholder cho dev FE thêm screen.
-/// Mount header/footer bằng cách import widgets từ lib/widgets/.
+/// AppRouter — tat ca route da co cua app.
 class AppRouter {
   AppRouter._();
 
   static final GoRouter router = GoRouter(
     initialLocation: AppRoutes.home,
     debugLogDiagnostics: false,
-    errorBuilder: (context, state) => _ErrorScreen(error: state.error?.toString()),
+    errorBuilder: (context, state) =>
+        _ErrorScreen(error: state.error?.toString()),
     routes: [
-      // TODO Dev FE: Thêm các route screen của bạn vào đây.
-      // Ví dụ:
-      //   GoRoute(
-      //     path: AppRoutes.cart,
-      //     builder: (context, state) => const CartScreen(),
-      //   ),
-      //
-      // Hiện tại chỉ giữ placeholder để app build được. Lead sẽ merge
-      // các route từ từng dev sau khi screen được review.
-
-      // Home — mount PaprikaHeader + body placeholder + PaprikaFooter
+      // Trang chu
       GoRoute(
         path: AppRoutes.home,
         builder: (context, state) => const HomeScreen(),
@@ -69,10 +65,42 @@ class AppRouter {
         path: AppRoutes.splash,
         builder: (context, state) => const HomeScreen(),
       ),
-      // Reservation — đặt bàn, có form + quick actions
+
+      // Dat ban
       GoRoute(
         path: AppRoutes.reservation,
         builder: (context, state) => const ReservationScreen(),
+      ),
+
+      // Gioi thieu
+      GoRoute(
+        path: AppRoutes.about,
+        builder: (context, state) => const AboutScreen(),
+      ),
+
+      // Chi nhanh
+      GoRoute(
+        path: AppRoutes.branches,
+        builder: (context, state) => const BranchesScreen(),
+      ),
+
+      // Chi tiet chi nhanh
+      GoRoute(
+        path: AppRoutes.branchDetail,
+        builder: (context, state) {
+          final idStr = state.pathParameters['id'];
+          final id = int.tryParse(idStr ?? '');
+          if (id == null) {
+            return const _ErrorScreen(error: 'ID chi nhanh khong hop le');
+          }
+          return BranchDetailScreen(branchId: id);
+        },
+      ),
+
+      // Lien he
+      GoRoute(
+        path: AppRoutes.contact,
+        builder: (context, state) => const ContactScreen(),
       ),
     ],
   );
@@ -85,8 +113,8 @@ class _ErrorScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Lỗi')),
-      body: Center(child: Text(error ?? 'Đã có lỗi xảy ra')),
+      appBar: AppBar(title: const Text('Loi')),
+      body: Center(child: Text(error ?? 'Da co loi xay ra')),
     );
   }
 }
