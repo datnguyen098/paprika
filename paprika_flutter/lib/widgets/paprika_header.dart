@@ -48,6 +48,9 @@ class _PaprikaHeaderState extends ConsumerState<PaprikaHeader> {
   static const _navItems = <_NavItem>[
     _NavItem(label: 'Trang chủ', route: AppRoutes.home),
     _NavItem(label: 'Thực đơn', route: AppRoutes.menu),
+    _NavItem(label: 'Giới thiệu', route: AppRoutes.about, icon: Icons.info_outline),
+    _NavItem(label: 'Chi nhánh', route: AppRoutes.branches, icon: Icons.storefront_outlined),
+    _NavItem(label: 'Liên hệ', route: AppRoutes.contact, icon: Icons.contact_mail_outlined),
     _NavItem(label: 'Đặt bàn', route: AppRoutes.reservation),
   ];
 
@@ -63,6 +66,9 @@ class _PaprikaHeaderState extends ConsumerState<PaprikaHeader> {
     // Các route đã có screen (xem lib/app/routes.dart).
     if (route == AppRoutes.home ||
         route == AppRoutes.splash ||
+        route == AppRoutes.about ||
+        route == AppRoutes.branches ||
+        route == AppRoutes.contact ||
         route == AppRoutes.reservation) {
       context.go(route);
       return;
@@ -87,12 +93,8 @@ class _PaprikaHeaderState extends ConsumerState<PaprikaHeader> {
         return 'Hồ sơ';
       case AppRoutes.orders:
         return 'Đơn hàng';
-      case AppRoutes.branches:
-        return 'Chi nhánh';
       case AppRoutes.notifications:
         return 'Thông báo';
-      case AppRoutes.contact:
-        return 'Liên hệ';
       default:
         return null;
     }
@@ -145,8 +147,6 @@ class _PaprikaHeaderState extends ConsumerState<PaprikaHeader> {
                 Expanded(child: _buildDesktopNav(context)),
                 const SizedBox(width: AppConstants.spaceMd),
                 _buildLanguageSelector(context),
-                const SizedBox(width: AppConstants.spaceXs),
-                _buildStoreIconButton(context),
                 const SizedBox(width: AppConstants.spaceXs),
               ] else ...[
                 const Spacer(),
@@ -203,6 +203,7 @@ class _PaprikaHeaderState extends ConsumerState<PaprikaHeader> {
         for (final item in _navItems) ...[
           _NavLink(
             label: item.label,
+            icon: item.icon,
             isActive: _isActive(current, item.route),
             onTap: () => _go(context, item.route),
           ),
@@ -248,14 +249,6 @@ class _PaprikaHeaderState extends ConsumerState<PaprikaHeader> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildStoreIconButton(BuildContext context) {
-    return IconButton(
-      tooltip: 'Cơ sở',
-      onPressed: () => ComingSoon.show(context, feature: 'Cơ sở'),
-      icon: const Icon(Icons.storefront_outlined, color: Colors.white),
     );
   }
 
@@ -325,6 +318,7 @@ class _PaprikaHeaderState extends ConsumerState<PaprikaHeader> {
           for (final item in _navItems) ...[
             _MobileNavLink(
               label: item.label,
+              icon: item.icon,
               isActive: _isActive(current, item.route),
               onTap: () => _go(context, item.route),
             ),
@@ -344,9 +338,14 @@ class _PaprikaHeaderState extends ConsumerState<PaprikaHeader> {
 }
 
 class _NavItem {
-  const _NavItem({required this.label, required this.route});
+  const _NavItem({
+    required this.label,
+    required this.route,
+    this.icon,
+  });
   final String label;
   final String route;
+  final IconData? icon;
 }
 
 class _NavLink extends StatelessWidget {
@@ -354,10 +353,12 @@ class _NavLink extends StatelessWidget {
     required this.label,
     required this.isActive,
     required this.onTap,
+    this.icon,
   });
   final String label;
   final bool isActive;
   final VoidCallback onTap;
+  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
@@ -380,13 +381,26 @@ class _NavLink extends StatelessWidget {
         overlayColor:
             WidgetStatePropertyAll(Colors.white.withValues(alpha: 0.1)),
       ),
-      child: Text(
-        label.toUpperCase(),
-        style: const TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0.14,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(
+              icon,
+              size: 14,
+              color: isActive ? Colors.white : Colors.white70,
+            ),
+            const SizedBox(width: 4),
+          ],
+          Text(
+            label.toUpperCase(),
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.14,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -397,10 +411,12 @@ class _MobileNavLink extends StatelessWidget {
     required this.label,
     required this.isActive,
     required this.onTap,
+    this.icon,
   });
   final String label;
   final bool isActive;
   final VoidCallback onTap;
+  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
@@ -423,14 +439,33 @@ class _MobileNavLink extends StatelessWidget {
             horizontal: AppConstants.spaceMd,
             vertical: AppConstants.spaceSm,
           ),
-          child: Text(
-            label.toUpperCase(),
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.14,
-            ),
+          child: Row(
+            children: [
+              if (icon != null) ...[
+                Icon(
+                  icon,
+                  color: Colors.white,
+                  size: 20,
+                ),
+                const SizedBox(width: AppConstants.spaceSm),
+              ],
+              Expanded(
+                child: Text(
+                  label.toUpperCase(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.14,
+                  ),
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right,
+                color: Colors.white54,
+                size: 18,
+              ),
+            ],
           ),
         ),
       ),

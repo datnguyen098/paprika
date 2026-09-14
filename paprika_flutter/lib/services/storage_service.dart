@@ -1,5 +1,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../core/constants/api_constants.dart';
+
 /// Wrapper cho SharedPreferences - dùng để lưu token, user info, locale, ...
 /// Repository/Service khác dùng qua DI (providers).
 class StorageService {
@@ -17,6 +19,7 @@ class StorageService {
   static const String _kActiveBranchId = 'active_branch_id';
   static const String _kCartSessionId = 'cart_session_id';
   static const String _kOnboardingDone = 'onboarding_done';
+  static const String _kWebOrigin = 'web_origin';
 
   // ==================== Auth Token ====================
   Future<void> setToken(String? token) async {
@@ -116,6 +119,21 @@ class StorageService {
 
   Future<void> setOnboardingDone(bool value) async {
     await _prefs.setBool(_kOnboardingDone, value);
+  }
+
+  // ==================== Web Origin (cho ImageHelper) ====================
+  /// Trả về web origin (vd `http://10.0.2.2:8000`) dùng để ghép URL ảnh.
+  /// Mặc định lấy từ ApiConstants.webOrigin nếu chưa set.
+  String getWebOrigin() =>
+      _prefs.getString(_kWebOrigin) ?? ApiConstants.webOrigin;
+
+  /// Override web origin (vd khi user đổi môi trường).
+  Future<void> setWebOrigin(String? origin) async {
+    if (origin == null || origin.isEmpty) {
+      await _prefs.remove(_kWebOrigin);
+      return;
+    }
+    await _prefs.setString(_kWebOrigin, origin);
   }
 
   // ==================== Reset ====================

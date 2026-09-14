@@ -1,14 +1,24 @@
+import '../config/env.dart';
+
 /// API endpoints - tất cả route từ Paprika-main/routes/api.php
 class ApiConstants {
   ApiConstants._();
 
-  /// Base URL cho Laravel API
-  /// - Android emulator dùng 10.0.2.2 (đặc biệt, trỏ vào localhost máy host)
-  /// - iOS simulator dùng localhost hoặc 127.0.0.1
-  /// - Production: thay bằng https://api.paprika.com/api/v1
+  // ==================== Base URLs ====================
+  /// Base URL cho Laravel API — lấy tự động từ [Env] (auto-detect thiết bị).
   ///
-  /// Tạm thời dùng 10.0.2.2 để dev Android, sau deploy đổi lại.
-  static const String baseUrl = 'http://10.0.2.2:8000/api/v1';
+  /// Mapping thiết bị → host (xem chi tiết tại lib/core/config/env.dart):
+  ///   - Android emulator      → http://10.0.2.2:8000/api/v1
+  ///   - Android thiết bị thật → http://192.168.1.53:8000/api/v1
+  ///   - iOS Simulator         → http://127.0.0.1:8000/api/v1
+  ///   - Web                   → http://localhost:8000/api/v1
+  ///   - Production (override) → truyền --dart-define=API_BASE_URL=...
+  static String get baseUrl => Env.apiBaseUrl;
+
+  /// Origin của web Laravel (KHÔNG kèm /api/v1).
+  /// Dùng để build absolute URL cho ảnh trả về relative path từ BE
+  /// (vd `image: "paprika/menu/pho-bo.jpg"` → http://{host}/paprika/menu/pho-bo.jpg).
+  static String get webOrigin => Env.webOrigin;
 
   // ==================== Timeouts ====================
   static const Duration connectTimeout = Duration(seconds: 15);
@@ -19,8 +29,14 @@ class ApiConstants {
   static const String headerContentType = 'Content-Type';
   static const String headerAuthorization = 'Authorization';
   static const String headerLocale = 'Accept-Language';
+  static const String headerBranch = 'X-Branch-Id';
   static const String valueJson = 'application/json';
   static const String bearerPrefix = 'Bearer';
+
+  // ==================== Endpoints - Home ====================
+  /// GET /api/v1/home — trả về banners, categories, featured, testimonials,
+  /// latest_posts, promo_popup.
+  static const String home = '/home';
 
   // ==================== Endpoints - Categories ====================
   static const String categories = '/categories';
@@ -31,6 +47,20 @@ class ApiConstants {
   static const String dishSearch = '/dishes/search';
   static String dishDetail(int id) => '/dishes/$id';
 
+  // ==================== Endpoints - About ====================
+  /// GET /api/v1/about — trả về story, mission, vision, team_members, stats.
+  static const String about = '/about';
+
+  // ==================== Endpoints - Branches ====================
+  /// GET /api/v1/branches — danh sách chi nhánh active.
+  /// GET /api/v1/branches/{id} — chi tiết 1 chi nhánh.
+  static const String branches = '/branches';
+  static String branchDetail(int id) => '/branches/$id';
+
+  // ==================== Endpoints - Contact ====================
+  /// POST /api/v1/contact — gửi form liên hệ.
+  static const String contact = '/contact';
+
   // ==================== Endpoints - Auth (định nghĩa sẵn, BE chưa có) ====================
   static const String authRegister = '/auth/register';
   static const String authLogin = '/auth/login';
@@ -40,9 +70,6 @@ class ApiConstants {
 
   // ==================== Endpoints - Banners ====================
   static const String banners = '/banners/active';
-
-  // ==================== Endpoints - Branches ====================
-  static const String branches = '/branches';
 
   // ==================== Endpoints - Cart ====================
   static const String cart = '/cart';
