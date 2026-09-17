@@ -89,6 +89,8 @@ class ApiService {
         responseType: ResponseType.json,
       ),
     );
+    // ignore: avoid_print
+    debugPrint('🌐 ApiService baseUrl = ${ApiConstants.baseUrl}');
     _setupInterceptors();
   }
 
@@ -135,8 +137,13 @@ class ApiService {
           if (kDebugMode) {
             debugPrint(
               '❌ ${error.requestOptions.uri} - '
-              '${error.response?.statusCode ?? ''} ${error.message}',
+              'type=${error.type} '
+              'status=${error.response?.statusCode ?? ''} '
+              'msg=${error.message}',
             );
+            if (error.response?.data != null) {
+              debugPrint('   body=${error.response?.data}');
+            }
           }
           handler.next(error);
         },

@@ -58,6 +58,7 @@ class BottomNavBar extends ConsumerWidget {
     // Các route đã có screen (xem lib/app/routes.dart).
     if (route == AppRoutes.home ||
         route == AppRoutes.splash ||
+        route == AppRoutes.menu ||
         route == AppRoutes.reservation) {
       context.go(route);
       return;

@@ -69,6 +69,7 @@ class _PaprikaHeaderState extends ConsumerState<PaprikaHeader> {
         route == AppRoutes.about ||
         route == AppRoutes.branches ||
         route == AppRoutes.contact ||
+        route == AppRoutes.menu ||
         route == AppRoutes.reservation) {
       context.go(route);
       return;

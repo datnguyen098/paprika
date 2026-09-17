@@ -191,6 +191,7 @@ class _Hero extends StatelessWidget {
                   icon: Icons.restaurant_menu,
                   label: 'Xem thực đơn',
                   feature: 'Thực đơn',
+                  route: AppRoutes.menu,
                 ),
               ),
               const SizedBox(width: AppConstants.spaceSm),
@@ -210,10 +211,20 @@ class _Hero extends StatelessWidget {
 }
 
 class _PrimaryCta extends StatelessWidget {
-  const _PrimaryCta({required this.icon, required this.label, required this.feature});
+  const _PrimaryCta({
+    required this.icon,
+    required this.label,
+    required this.feature,
+    this.route,
+  });
+
   final IconData icon;
   final String label;
   final String feature;
+
+  /// Nếu có route → navigate tới route đó khi tap.
+  /// Nếu null → hiển thị ComingSoon (route chưa có screen).
+  final String? route;
 
   @override
   Widget build(BuildContext context) {
@@ -224,7 +235,14 @@ class _PrimaryCta extends StatelessWidget {
       shadowColor: AppColors.accent.withValues(alpha: 0.4),
       child: InkWell(
         borderRadius: BorderRadius.circular(AppConstants.radiusSm),
-        onTap: () => context.push(AppRoutes.menu),
+        onTap: () {
+          if (route != null) {
+            debugPrint('🔵 _PrimaryCta navigate → $route');
+            context.go(route!);
+          } else {
+            ComingSoon.show(context, feature: feature);
+          }
+        },
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 14),
           alignment: Alignment.center,
