@@ -22,15 +22,29 @@ class ImageHelper {
   /// Override trong test bằng cách gán [customJoiner] = (path) => "...".
   static String Function(String) customJoiner = _defaultJoiner;
 
+  /// Các prefix BE dùng làm namespace cho ảnh (server Laravel expose
+  /// qua route `/api/v1/images/{path}` — xem routes/api.php).
+  static const List<String> _serverPrefixes = [
+    'paprika/',
+    'images/',
+    'uploads/',
+  ];
+
   static String _defaultJoiner(String path) {
-    final origin = ApiConstants.webOrigin;
-    if (path.startsWith('/')) {
-      // `path` đã bắt đầu bằng `/` (vd `/storage/x.jpg`) → ghép thẳng.
-      return '$origin$path';
+    // Nếu path thuộc 1 trong các prefix BE serve → ghép qua endpoint images.
+    for (final p in _serverPrefixes) {
+      if (path.startsWith(p)) {
+        return '${ApiConstants.webOrigin}/api/v1/images/$path';
+      }
     }
-    // Relative (vd `banners/x.jpg`) → thêm `/` để tránh
-    // `http://host` (không có `/`) ghép thành `http://hostbanners/...`.
-    return '$origin/$path';
+
+    // Nếu đã là `/storage/...` → ghép thẳng (ảnh public storage).
+    if (path.startsWith('/')) {
+      return '${ApiConstants.webOrigin}$path';
+    }
+
+    // Fallback: relative khác (vd `banners/x.jpg` cũ) → ghép đơn giản.
+    return '${ApiConstants.webOrigin}/$path';
   }
 
   /// Ghép URL đầy đủ từ relative path BE trả về.
@@ -45,7 +59,8 @@ class ImageHelper {
       return path;
     }
 
-    // Cả 2 dạng (`/foo` và `foo/bar`) đều do [_defaultJoiner] lo.
+    // Cả 3 dạng (`/foo`, `foo/bar`, `paprika/foo`) đều do
+    // [_defaultJoiner] lo.
     return customJoiner(path);
   }
 
