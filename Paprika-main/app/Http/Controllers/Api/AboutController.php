@@ -4,116 +4,64 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Page;
-use App\Models\SiteSetting;
 use Illuminate\Http\JsonResponse;
 
 class AboutController extends Controller
 {
     /**
+     * Slug ứng với từng locale cho trang About.
+     *
+     * Slug gốc trong bảng `pages` là tiếng Việt (`gioi-thieu`).
+     * Bản dịch EN/EL nằm trong bảng `page_translations` với slug
+     * tương ứng (`about`, `schetikos`) — Controller quét cả 3 slug
+     * để không phụ thuộc vào việc BE có dịch sang ngôn ngữ đó hay
+     * chưa.
+     */
+    private const ABOUT_SLUGS = ['gioi-thieu', 'about', 'schetikos'];
+
+    /**
      * GET /api/v1/about
      *
-     * Lấy dữ liệu từ bảng pages (slug = 'about') kết hợp
-     * site_settings cho mission / vision / team / stats.
+     * Đọc trực tiếp từ bảng `pages` (slug ∈ {gioi-thieu, about, schetikos}).
+     * Trả về đúng 3 cột tồn tại trong bảng: title, content, image.
+     * Khi DB chưa có dữ liệu, trả { success: true, data: null }.
      */
     public function index(): JsonResponse
     {
+        // Lấy trang About từ bảng `pages` (slug ∈ {gioi-thieu, about, schetikos}).
+        // Ưu tiên slug VI gốc (`gioi-thieu`) rồi EN (`about`) rồi EL (`schetikos`).
+        // SQLite không hỗ trợ FIELD() nên dùng CASE WHEN.
         $page = Page::query()
-            ->where('slug', 'about')
+            ->whereIn('slug', self::ABOUT_SLUGS)
             ->where('is_active', true)
+            ->orderByRaw(
+                "CASE slug "
+                ."WHEN 'gioi-thieu' THEN 1 "
+                ."WHEN 'about'     THEN 2 "
+                ."WHEN 'schetikos' THEN 3 "
+                ."ELSE 4 END"
+            )
             ->first();
 
         if (! $page) {
-            // Fallback dev: chưa seed Page slug='about' thì trả data mặc định
-            // để Flutter UI không bị trắng. Khi đã seed DB, block này không chạy.
             return response()->json([
                 'success' => true,
-                'data'    => [
-                    'id'           => null,
-                    'title'        => 'About Paprika',
-                    'subtitle'     => $this->fallbackSubtitle(),
-                    'story'        => '<p>Paprika is a Vietnamese kitchen in Patras, serving pho, banh mi, nem, fresh rolls, grilled dishes and some familiar Greek favorites.</p><p>The restaurant focuses on fresh flavors, clear service and a convenient ordering experience for dine-in, takeaway or delivery.</p>',
-                    'mission'      => $this->fallbackMission(),
-                    'vision'       => $this->fallbackVision(),
-                    'cover_image'  => null,
-                    'team_members' => [],
-                    'stats'        => [],
-                ],
+                'data'    => null,
             ]);
         }
 
-        $settings = $this->getAboutSettings();
-
+        // Trả về đúng 3 cột tồn tại trong bảng `pages`:
+        //   title     → tiêu đề trang (từ DB, có localized fallback)
+        //   content   → nội dung trang (từ DB, có localized fallback)
+        //   image     → ảnh bìa trang (từ DB)
         return response()->json([
             'success' => true,
             'data'    => [
-                'id'           => $page->id,
-                'title'        => $page->title,
-                'subtitle'     => $settings['subtitle'],
-                'story'        => $page->content,
-                'mission'      => $settings['mission'],
-                'vision'       => $settings['vision'],
-                'cover_image'  => $page->image,
-                'team_members' => $settings['team_members'],
-                'stats'        => $settings['stats'],
+                'title'   => $page->localized('title', $page->title),
+                'content' => $page->localized('content', $page->content),
+                'image'   => $page->image,
             ],
         ]);
     }
 
-    /**
-     * Đọc các setting key 'about_*' và giải mã JSON cho
-     * team_members + stats. Trả về mảng rỗng nếu setting
-     * chưa được cấu hình.
-     *
-     * @return array{subtitle:?string,mission:?string,vision:?string,team_members:array<int,array<string,mixed>>,stats:array<int,array<string,mixed>>}
-     */
-    private function getAboutSettings(): array
-    {
-        $raw = SiteSetting::query()
-            ->whereIn('key', [
-                'about_subtitle',
-                'about_mission',
-                'about_vision',
-                'about_team_members',
-                'about_stats',
-            ])
-            ->pluck('value', 'key');
-
-        return [
-            'subtitle'     => $raw['about_subtitle'] ?? $this->fallbackSubtitle(),
-            'mission'      => $raw['about_mission']  ?? $this->fallbackMission(),
-            'vision'       => $raw['about_vision']   ?? $this->fallbackVision(),
-            'team_members' => $this->decodeJson($raw['about_team_members'] ?? null, []),
-            'stats'        => $this->decodeJson($raw['about_stats']        ?? null, []),
-        ];
-    }
-
-    private function fallbackSubtitle(): string
-    {
-        return 'Vietnamese kitchen in Patras';
-    }
-
-    private function fallbackMission(): string
-    {
-        return 'To bring authentic Vietnamese flavors to Patras with fresh ingredients and warm hospitality.';
-    }
-
-    private function fallbackVision(): string
-    {
-        return 'A friendly place where Vietnamese and Greek food lovers can enjoy fresh, honest cooking together.';
-    }
-
-    /**
-     * @param  array<int,array<string,mixed>>  $fallback
-     * @return array<int,array<string,mixed>>
-     */
-    private function decodeJson(?string $value, array $fallback): array
-    {
-        if ($value === null || $value === '') {
-            return $fallback;
-        }
-
-        $decoded = json_decode($value, true);
-
-        return is_array($decoded) ? $decoded : $fallback;
-    }
 }

@@ -4,8 +4,8 @@ import '../models/about_model.dart';
 
 /// Repository cho About — GET /api/v1/about
 ///
-/// Trả về story, mission, vision, team_members, stats.
-/// Mock data — sau nối DB bảng pages (slug=gioi-thieu) có translations.
+/// PHP trả: { success, data: { title, content, image } }
+/// — đúng 3 trường tồn tại trong bảng `pages`.
 class AboutRepository {
   AboutRepository(this._api);
 
