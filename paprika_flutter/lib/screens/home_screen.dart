@@ -55,7 +55,10 @@ class HomeScreen extends ConsumerWidget {
                   const SizedBox(height: AppConstants.spaceLg),
                   const _PromotionsSection(), // promo cards (NEW)
                   const SizedBox(height: AppConstants.spaceLg),
-                  const _SectionTitle(text: 'Món nổi bật'),
+                  const _SectionTitle(
+                    eyebrow: 'Khám phá',
+                    text: 'Món nổi bật',
+                  ),
                   const SizedBox(height: AppConstants.spaceMd),
                   const _BestSellersSection(), // featured.take(3), 1 cột
                   const SizedBox(height: AppConstants.spaceLg),
@@ -63,11 +66,17 @@ class HomeScreen extends ConsumerWidget {
                   const SizedBox(height: AppConstants.spaceLg),
                   const _ServicesSection(), // 3 cards (NEW)
                   const SizedBox(height: AppConstants.spaceLg),
-                  const _SectionTitle(text: 'Khách hàng nói gì'),
+                  const _SectionTitle(
+                    eyebrow: 'Đánh giá',
+                    text: 'Khách hàng nói gì',
+                  ),
                   const SizedBox(height: AppConstants.spaceMd),
                   const _TestimonialsSection(), // từ homeProvider
                   const SizedBox(height: AppConstants.spaceLg),
-                  const _SectionTitle(text: 'Về Paprika Patras'),
+                  const _SectionTitle(
+                    eyebrow: 'Về chúng tôi',
+                    text: 'Paprika Patras',
+                  ),
                   const SizedBox(height: AppConstants.spaceMd),
                   const _AboutCard(), // static
                   const SizedBox(height: AppConstants.spaceLg),
@@ -87,38 +96,61 @@ class HomeScreen extends ConsumerWidget {
 }
 
 // ===========================================================================
-// SECTION TITLE — heading nhỏ + divider
+// SECTION TITLE — eyebrow label (đỏ) + heading lớn + divider
 // ===========================================================================
 class _SectionTitle extends StatelessWidget {
-  const _SectionTitle({required this.text});
+  const _SectionTitle({
+    required this.text,
+    this.eyebrow,
+  });
   final String text;
+  final String? eyebrow;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppConstants.spaceMd),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 4,
-            height: 18,
-            decoration: BoxDecoration(
-              color: AppColors.accent,
-              borderRadius: BorderRadius.circular(2),
+          // Eyebrow label (nếu có) - màu đỏ như PHP
+          if (eyebrow != null) ...[
+            Text(
+              eyebrow!.toUpperCase(),
+              style: const TextStyle(
+                color: AppColors.accent,
+                fontSize: 10,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.5,
+              ),
             ),
+            const SizedBox(height: 4),
+          ],
+          // Heading + divider
+          Row(
+            children: [
+              Container(
+                width: 4,
+                height: 18,
+                decoration: BoxDecoration(
+                  color: AppColors.accent,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                text,
+                style: const TextStyle(
+                  color: AppColors.primaryStrong,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.2,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(child: Container(height: 1, color: AppColors.border)),
+            ],
           ),
-          const SizedBox(width: 8),
-          Text(
-            text,
-            style: const TextStyle(
-              color: AppColors.primaryStrong,
-              fontSize: 18,
-              fontWeight: FontWeight.w900,
-              letterSpacing: -0.2,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(child: Container(height: 1, color: AppColors.border)),
         ],
       ),
     );
@@ -141,120 +173,189 @@ class _HeroSection extends ConsumerWidget {
       orElse: () => null,
     );
 
+    // Title và subtitle cho Hero (khớp PHP)
     final title = banner?.title.isNotEmpty == true
         ? banner!.title
-        : 'PAPRIKA -\nẨM THỰC\nVIỆT NAM';
+        : 'Paprika - Ẩm thực Việt Nam';
     final subtitle = banner?.subtitle.isNotEmpty == true
         ? banner!.subtitle
-        : 'Phở bò nấu chậm 12 tiếng, gyros Hy Lạp chuẩn vị Athens — '
-            'ẩm thực đỉnh cao giữa lòng Patras';
-    final ctaLabel = banner?.ctaLabel.isNotEmpty == true
-        ? banner!.ctaLabel
-        : 'ĐẶT MÓN NGAY';
+        : 'Phở, bánh mì, nem và các món nướng tại Patras';
 
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.symmetric(horizontal: AppConstants.spaceMd),
-      padding: const EdgeInsets.all(AppConstants.spaceLg),
+      // Bỏ margin để Hero full-width, che viền trắng 2 bên
       decoration: BoxDecoration(
-        color: AppColors.primaryStrong, // #043427
-        borderRadius: BorderRadius.circular(AppConstants.radiusLg),
+        // Gradient phủ toàn bộ Hero: xanh đậm → nhạt → trong suốt (giống PHP)
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            const Color(0xFF043427), // Xanh đậm ở TOP
+            const Color(0xFF064535), // 20%
+            const Color(0xFF0A5540), // 40%
+            const Color(0xFF106B50), // 60%
+            const Color(0xFF1A8060), // 80% - bắt đầu nhạt rõ
+            const Color(0xFF1A8060).withValues(alpha: 0.6), // 90% - rất nhạt
+            const Color(0xFF1A8060).withValues(alpha: 0.0), // 100% - transparent
+          ],
+          stops: const [0.0, 0.2, 0.4, 0.6, 0.78, 0.9, 1.0],
+        ),
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.zero, // Không bo góc trên
+          topRight: Radius.zero,
+          bottomLeft: Radius.circular(18), // Bo góc dưới
+          bottomRight: Radius.circular(18),
+        ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primaryStrong.withValues(alpha: 0.4),
-            blurRadius: 24,
-            offset: const Offset(0, 10),
+            color: Colors.black.withValues(alpha: 0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Badge "ĐẶT MÓN ONLINE" đỏ với chấm vàng pulsing (giống screenshot)
-          Row(
-            children: [
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppColors.accent,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _PulsingDot(),
-                    SizedBox(width: 6),
-                    Text(
-                      'ĐẶT MÓN ONLINE',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0.16,
-                      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppConstants.spaceMd),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Badge "Đặt món online" - pill shape, margin-bottom lớn như PHP (mb-6)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.accent,
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _PulsingDot(),
+                  SizedBox(width: 8),
+                  Text(
+                    'Đặt món online',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.5,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
-          ),
-          const SizedBox(height: AppConstants.spaceLg),
-          // Title (italic uppercase — giống screenshot "PAPRIKA - ẨM THỰC VIỆT NAM")
-          Text(
-            title,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 36,
-              fontWeight: FontWeight.w900,
-              fontStyle: FontStyle.italic,
-              height: 1.05,
-              letterSpacing: -0.5,
             ),
-          ),
-          const SizedBox(height: AppConstants.spaceMd),
-          Text(
-            subtitle,
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.82),
-              fontSize: 13,
-              height: 1.5,
+            const SizedBox(height: 24), // Giống PHP: mb-6
+
+            // Title - responsive, lớn như PHP (text-4xl sm:text-5xl)
+            LayoutBuilder(
+              builder: (context, constraints) {
+                double fontSize;
+                if (constraints.maxWidth < 320) {
+                  fontSize = 32;
+                } else if (constraints.maxWidth < 380) {
+                  fontSize = 38;
+                } else {
+                  fontSize = 44; // ~text-4xl
+                }
+                return Text(
+                  title.toUpperCase(),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: fontSize,
+                    fontWeight: FontWeight.w900,
+                    fontStyle: FontStyle.italic,
+                    height: 1.1,
+                    letterSpacing: -1,
+                  ),
+                );
+              },
             ),
-          ),
-          const SizedBox(height: AppConstants.spaceLg),
-          // CTA chính - 1 nút đỏ full-width (giống screenshot)
-          _PrimaryCta(
-            icon: Icons.restaurant_menu,
-            label: ctaLabel,
-            route: AppRoutes.menu,
-          ),
-          const SizedBox(height: AppConstants.spaceLg),
-          // Stats — 3 cột (giống Laravel)
-          Container(
-            padding: const EdgeInsets.only(top: AppConstants.spaceMd),
-            decoration: BoxDecoration(
-              border: Border(
-                top: BorderSide(
-                  color: Colors.white.withValues(alpha: 0.15),
-                  width: 1,
+            const SizedBox(height: 16), // mb-4
+
+            // Description - giống PHP (max-w-lg, leading-relaxed)
+            SizedBox(
+              width: 300, // max-w-lg approximation
+              child: Text(
+                subtitle,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.8),
+                  fontSize: 16,
+                  height: 1.6, // leading-relaxed
                 ),
               ),
             ),
-            child: const Row(
-              children: [
-                Expanded(
-                  child: _Stat(value: '100%', label: 'Nguyên liệu tươi'),
+            const SizedBox(height: 32), // mb-8
+
+            // CTA Button - padding lớn hơn như PHP (px-8 py-4)
+            SizedBox(
+              width: double.infinity,
+              child: Material(
+                color: AppColors.accent,
+                borderRadius: BorderRadius.circular(999), // rounded-full
+                elevation: 4,
+                shadowColor: const Color(0xFF7F1D1D).withValues(alpha: 0.4), // shadow-red-900/30
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(999),
+                  onTap: () => context.push(AppRoutes.menu),
+                  child: Container(
+                    height: 52, // py-4
+                    padding: const EdgeInsets.symmetric(horizontal: 32), // px-8
+                    alignment: Alignment.center,
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Đặt món ngay',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.5,
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        Icon(
+                          Icons.arrow_forward,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-                Expanded(
-                  child: _Stat(value: 'Nhanh', label: 'Giao hàng'),
-                ),
-                Expanded(
-                  child: _Stat(value: 'Dễ', label: 'Đặt món'),
-                ),
-              ],
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 24), // Khoảng cách với benefits
+
+            // Benefits — 3 cột với divider phía trên (giống PHP)
+            Container(
+              padding: const EdgeInsets.only(top: 16),
+              decoration: BoxDecoration(
+                border: Border(
+                  top: BorderSide(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    width: 1,
+                  ),
+                ),
+              ),
+              child: const Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: _Stat(value: '100%', label: 'Tươi ngon'),
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: _Stat(value: 'Nhanh', label: 'Tự nhận'),
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: _Stat(value: 'Dễ', label: 'Thanh toán'),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -309,26 +410,28 @@ class _Stat extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
           value,
+          textAlign: TextAlign.center,
           style: const TextStyle(
             color: Colors.white,
-            fontSize: 22,
+            fontSize: 20,
             fontWeight: FontWeight.w900,
-            height: 1.1,
+            height: 1.2,
           ),
         ),
         const SizedBox(height: 4),
         Text(
           label,
+          textAlign: TextAlign.center,
           style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.65),
+            color: Colors.white.withValues(alpha: 0.6),
             fontSize: 10,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0.6,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.5,
           ),
         ),
       ],
