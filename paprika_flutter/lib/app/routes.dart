@@ -66,7 +66,6 @@ class AppRouter {
         path: AppRoutes.splash,
         builder: (context, state) => const HomeScreen(),
       ),
-<<<<<<< HEAD
 
       // Dat ban
       // Menu — danh sách món, filter theo category, lấy từ API
