@@ -12,6 +12,8 @@ class HomeData extends Equatable {
     required this.testimonials,
     required this.latestPosts,
     this.promoPopup,
+    this.promotions = const [],
+    this.galleryImages = const [],
   });
 
   final List<HomeBanner> banners;
@@ -20,6 +22,8 @@ class HomeData extends Equatable {
   final List<HomeTestimonial> testimonials;
   final List<HomePost> latestPosts;
   final HomePromoPopup? promoPopup;
+  final List<HomePromotion> promotions;
+  final List<HomeGalleryImage> galleryImages;
 
   factory HomeData.fromJson(Map<String, dynamic> json) {
     final data = json['data'] as Map<String, dynamic>? ?? {};
@@ -45,6 +49,8 @@ class HomeData extends Equatable {
       promoPopup: data['promo_popup'] is Map<String, dynamic>
           ? HomePromoPopup.fromJson(data['promo_popup'] as Map<String, dynamic>)
           : null,
+      promotions: parseList('promotions', HomePromotion.fromJson),
+      galleryImages: parseList('gallery_images', HomeGalleryImage.fromJson),
     );
   }
 
@@ -56,6 +62,8 @@ class HomeData extends Equatable {
         testimonials,
         latestPosts,
         promoPopup,
+        promotions,
+        galleryImages,
       ];
 }
 
@@ -167,13 +175,20 @@ class HomeFeaturedDish extends Equatable {
   }
 
   factory HomeFeaturedDish.fromJson(Map<String, dynamic> json) {
+    int parseMoney(Object? raw) {
+      if (raw == null) return 0;
+      if (raw is num) return raw.toInt();
+      if (raw is String) return int.tryParse(raw) ?? 0;
+      return 0;
+    }
+
     return HomeFeaturedDish(
       id: (json['id'] as num).toInt(),
       name: json['name'] as String? ?? '',
       image: json['image'] as String? ?? '',
-      price: (json['price'] as num).toInt(),
+      price: parseMoney(json['price']),
       oldPrice: json['old_price'] != null
-          ? (json['old_price'] as num).toInt()
+          ? parseMoney(json['old_price'])
           : null,
       rating: (json['rating'] as num?)?.toDouble(),
       isNew: json['is_new'] as bool? ?? false,
@@ -307,4 +322,76 @@ class HomePromoPopup extends Equatable {
 
   @override
   List<Object?> get props => [enabled, title, ctaLink, expiresAt];
+}
+
+/// Promotion (ưu đãi) hiển thị trên home.
+/// BE trả: { id, badge, title, subtitle, description, image, cta_label, cta_link }
+class HomePromotion extends Equatable {
+  const HomePromotion({
+    required this.id,
+    required this.badge,
+    required this.title,
+    required this.subtitle,
+    required this.description,
+    required this.image,
+    required this.ctaLabel,
+    required this.ctaLink,
+  });
+
+  final int id;
+  final String badge;
+  final String title;
+  final String subtitle;
+  final String description;
+  final String image;
+  final String ctaLabel;
+  final String ctaLink;
+
+  factory HomePromotion.fromJson(Map<String, dynamic> json) => HomePromotion(
+        id: (json['id'] as num).toInt(),
+        badge: json['badge'] as String? ?? '',
+        title: json['title'] as String? ?? '',
+        subtitle: json['subtitle'] as String? ?? '',
+        description: json['description'] as String? ?? '',
+        image: json['image'] as String? ?? '',
+        ctaLabel: json['cta_label'] as String? ?? '',
+        ctaLink: json['cta_link'] as String? ?? '',
+      );
+
+  @override
+  List<Object?> get props => [id, title, ctaLink];
+}
+
+/// Gallery image hiển thị trên home (section "Không gian").
+/// BE trả: { id, title, alt_text, image, branch: { name } }
+class HomeGalleryImage extends Equatable {
+  const HomeGalleryImage({
+    required this.id,
+    required this.title,
+    required this.altText,
+    required this.image,
+    required this.branchName,
+  });
+
+  final int id;
+  final String title;
+  final String altText;
+  final String image;
+  final String branchName;
+
+  factory HomeGalleryImage.fromJson(Map<String, dynamic> json) {
+    final branch = json['branch'];
+    return HomeGalleryImage(
+      id: (json['id'] as num).toInt(),
+      title: json['title'] as String? ?? '',
+      altText: json['alt_text'] as String? ?? '',
+      image: json['image'] as String? ?? '',
+      branchName: branch is Map<String, dynamic>
+          ? branch['name'] as String? ?? ''
+          : '',
+    );
+  }
+
+  @override
+  List<Object?> get props => [id, title, branchName];
 }

@@ -9,11 +9,17 @@ class ApiConstants {
   ///
   /// Mapping thiết bị → host (xem chi tiết tại lib/core/config/env.dart):
   ///   - Android emulator      → http://10.0.2.2:8000/api/v1
-  ///   - Android thiết bị thật → http://192.168.1.53:8000/api/v1
+  ///   - Android thiết bị thật → http://192.168.1.10:8000/api/v1
   ///   - iOS Simulator         → http://127.0.0.1:8000/api/v1
   ///   - Web                   → http://localhost:8000/api/v1
   ///   - Production (override) → truyền --dart-define=API_BASE_URL=...
   static String get baseUrl => Env.apiBaseUrl;
+
+  /// Base URL cho Android emulator (hardcode theo IP LAN máy dev).
+  /// IP này được cấu hình theo mạng LAN của máy dev (Paprika-main Laravel server).
+  /// Thiết bị thật qua LAN dùng [lanDevIp] trong env.dart.
+  static const String _baseUrlAndroidEmulator =
+      'http://192.168.1.10:8000/api/v1';
 
   /// Origin của web Laravel (KHÔNG kèm /api/v1).
   /// Dùng để build absolute URL cho ảnh trả về relative path từ BE

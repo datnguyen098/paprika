@@ -49,7 +49,7 @@ class Env {
 
   /// IP LAN của máy dev (chạy Laravel).
   /// Khi chuyển Wi-Fi, chạy `ipconfig` trên máy dev rồi cập nhật chỗ này.
-  static const String lanDevIp = '192.168.1.53';
+  static const String lanDevIp = '192.168.1.10';
 
   /// Port Laravel dev (mặc định `php artisan serve` là 8000).
   static const String devPort = '8000';

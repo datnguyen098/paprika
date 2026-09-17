@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\DishController;
+use App\Http\Controllers\Api\ImageController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -19,6 +20,11 @@ Route::prefix('v1')->group(function () {
     
     // ================== PUBLIC ROUTES ==================
     // Không cần đăng nhập, ai cũng có thể gọi
+
+    // Images - Serve static files với CORS headers (fix CORS cho Flutter web)
+    Route::get('/images/{path}', [ImageController::class, 'serve'])
+        ->where('path', '.*')
+        ->name('api.v1.images.serve');
     
     // Categories - Lấy danh sách danh mục món ăn
     Route::get('/categories', [CategoryController::class, 'index'])

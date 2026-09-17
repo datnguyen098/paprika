@@ -6,6 +6,7 @@ import '../screens/branch_detail_screen.dart';
 import '../screens/branches_screen.dart';
 import '../screens/contact_screen.dart';
 import '../screens/home_screen.dart';
+import '../screens/menu_screen.dart';
 import '../screens/reservation_screen.dart';
 
 /// Dia nghĩa tat ca route name & path cua app.
@@ -67,6 +68,12 @@ class AppRouter {
       ),
 
       // Dat ban
+      // Menu — danh sách món, filter theo category, lấy từ API
+      GoRoute(
+        path: AppRoutes.menu,
+        builder: (context, state) => const MenuScreen(),
+      ),
+      // Reservation — đặt bàn, có form + quick actions
       GoRoute(
         path: AppRoutes.reservation,
         builder: (context, state) => const ReservationScreen(),

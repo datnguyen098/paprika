@@ -9,6 +9,17 @@ use Illuminate\Http\JsonResponse;
 class CategoryController extends Controller
 {
     /**
+     * Tạo URL ảnh với CORS headers qua route /api/v1/images/
+     */
+    protected function imageUrl(?string $path): ?string
+    {
+        if (!$path) {
+            return null;
+        }
+        return url("/api/v1/images/" . ltrim($path, '/'));
+    }
+
+    /**
      * Lấy danh sách danh mục món ăn (chỉ loại "dish")
      * 
      * API: GET /api/v1/categories
@@ -34,9 +45,7 @@ class CategoryController extends Controller
                 'name' => $category->localized('name'),      // Tên theo ngôn ngữ hiện tại (vi/en/el)
                 'slug' => $category->slug,                   // URL-friendly slug
                 'description' => $category->localized('description'),
-                'image' => $category->image
-                    ? asset($category->image)  // Chuyển thành full URL
-                    : null,
+                'image' => $this->imageUrl($category->image),
                 'dishes_count' => $category->dishes()->active()->count(), // Đếm số món trong category
             ];
         });

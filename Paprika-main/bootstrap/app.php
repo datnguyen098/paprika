@@ -20,6 +20,10 @@ return Application::configure(basePath: dirname(__DIR__))
             SetLocale::class,
             SetTimezone::class,
         ]);
+
+        // Enable CORS for API + static images (paprika/*)
+        $middleware->prepend(\Illuminate\Http\Middleware\HandleCors::class);
+
         $middleware->validateCsrfTokens(except: [
             'payments/viva/webhook',
         ]);
