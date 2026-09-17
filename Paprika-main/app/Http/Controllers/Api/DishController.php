@@ -20,6 +20,28 @@ class DishController extends Controller
     }
 
     /**
+     * Tạo URL ảnh với CORS headers qua route /api/v1/images/
+     *
+     * Fix CORS cho Flutter web: php artisan serve không thêm CORS headers
+     * cho static files, nên dùng route này để serve ảnh.
+     *
+     * @param string|null $path Đường dẫn file, ví dụ: /paprika/menu-catalog/item-001.jpg
+     * @return string|null
+     */
+    protected function imageUrl(?string $path): ?string
+    {
+        if (!$path) {
+            return null;
+        }
+
+        // Bỏ leading slash nếu có
+        $path = ltrim($path, '/');
+
+        // Convert sang route mới có CORS
+        return url("/api/v1/images/{$path}");
+    }
+
+    /**
      * Lấy danh sách món ăn (có filter)
      * 
      * API: GET /api/v1/menu
@@ -153,9 +175,9 @@ class DishController extends Controller
                 'ingredients' => $dish->localized('ingredients'),
                 'price' => (int) $dish->price,
                 'sale_price' => $dish->sale_price ? (int) $dish->sale_price : null,
-                'image' => $dish->image ? asset($dish->image) : null,
-                'gallery' => $dish->gallery 
-                    ? collect($dish->gallery)->map(fn ($img) => asset($img))->all() 
+                'image' => $this->imageUrl($dish->image),
+                'gallery' => $dish->gallery
+                    ? collect($dish->gallery)->map(fn ($img) => $this->imageUrl($img))->all()
                     : [],
                 'is_featured' => $dish->is_featured,
                 'category' => [
@@ -250,7 +272,7 @@ class DishController extends Controller
                 : null,
             'price' => (int) $dish->price,
             'sale_price' => $dish->sale_price ? (int) $dish->sale_price : null,
-            'image' => $dish->image ? asset($dish->image) : null,
+                'image' => $this->imageUrl($dish->image),
             'is_featured' => $dish->is_featured,
             'is_available' => $availability?->available ?? true,
             'availability_label' => $availability?->label(),

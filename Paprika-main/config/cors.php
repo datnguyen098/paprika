@@ -24,8 +24,18 @@ return [
 
     'allowed_methods' => ['*'],
 
+    /*
+    | Allowed origins - reads from CORS_ALLOWED_ORIGINS env var.
+    | For local dev, also include all localhost ports.
+    | Format: https://example.com,https://app.example.com
+    */
     'allowed_origins' => array_filter(array_map('trim', explode(',', env('CORS_ALLOWED_ORIGINS', '*')))),
 
+    /*
+    | Note: allowed_origins_patterns uses regex without delimiters.
+    | The fruitcake/cors library adds delimiters automatically.
+    | For local dev with random ports, add ports explicitly in allowed_origins.
+    */
     'allowed_origins_patterns' => [],
 
     'allowed_headers' => ['*'],

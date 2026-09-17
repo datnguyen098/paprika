@@ -34,20 +34,80 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
   /// ID của category đang chọn; null = "Tất cả".
   int? _selectedCategoryId;
 
+  /// Controller cho ô tìm kiếm.
+  final TextEditingController _searchController = TextEditingController();
+
+  /// Từ khoá tìm kiếm hiện tại.
+  String _searchQuery = '';
+
+  /// Trang hiện tại + tổng số trang (cập nhật từ API).
+  int _currentPage = 1;
+  int _lastPage = 1;
+
   /// Filter hiện tại cho menuProvider.
   MenuFilter _currentFilter() {
     return MenuFilter(
       categoryId: _selectedCategoryId,
-      page: 1,
-      perPage: 30,
+      search: _searchQuery.isEmpty ? null : _searchQuery,
+      page: _currentPage,
+      perPage: 12,
     );
   }
 
   void _onSelectCategory(int? id) {
-    setState(() => _selectedCategoryId = id);
+    setState(() {
+      _selectedCategoryId = id;
+      _currentPage = 1; // reset về trang 1 khi đổi category
+    });
+  }
+
+  void _onSearchChanged(String value) {
+    setState(() {
+      _searchQuery = value.trim();
+      _currentPage = 1; // reset về trang 1 khi tìm kiếm
+    });
+  }
+
+  void _onClearSearch() {
+    _searchController.clear();
+    setState(() {
+      _searchQuery = '';
+      _currentPage = 1;
+    });
+  }
+
+  void _onPageChanged(int page) {
+    if (page < 1 || page > _lastPage) return;
+    setState(() => _currentPage = page);
+    // Scroll lên đầu danh sách mỗi khi đổi trang.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        Scrollable.ensureVisible(
+          context,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  void _updatePagination(int current, int last) {
+    if (_currentPage == current && _lastPage == last) return;
+    setState(() {
+      _currentPage = current;
+      _lastPage = last;
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _onRefresh() async {
+    // Reset pagination về trang 1 khi refresh.
+    setState(() => _currentPage = 1);
     ref.invalidate(categoriesProvider);
     ref.invalidate(menuProvider(_currentFilter()));
     // Đợi Riverpod recompute xong.
@@ -74,8 +134,25 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
                       onSelect: _onSelectCategory,
                     ),
                   ),
+                  SliverToBoxAdapter(
+                    child: _SearchBar(
+                      controller: _searchController,
+                      onChanged: _onSearchChanged,
+                      onClear: _onClearSearch,
+                    ),
+                  ),
                   const SliverToBoxAdapter(child: SizedBox(height: 12)),
-                  _DishGrid(filter: _currentFilter()),
+                  _DishGrid(
+                    filter: _currentFilter(),
+                    onPaginationChanged: _updatePagination,
+                  ),
+                  SliverToBoxAdapter(
+                    child: _PaginationBar(
+                      currentPage: _currentPage,
+                      lastPage: _lastPage,
+                      onPageChanged: _onPageChanged,
+                    ),
+                  ),
                   const SliverToBoxAdapter(child: SizedBox(height: 24)),
                 ],
               ),
@@ -286,14 +363,26 @@ class _Chip extends StatelessWidget {
 // DISH GRID
 // ===========================================================================
 
-class _DishGrid extends ConsumerWidget {
-  const _DishGrid({required this.filter});
+class _DishGrid extends ConsumerStatefulWidget {
+  const _DishGrid({
+    required this.filter,
+    required this.onPaginationChanged,
+  });
 
   final MenuFilter filter;
+  final void Function(int currentPage, int lastPage) onPaginationChanged;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final menuAsync = ref.watch(menuProvider(filter));
+  ConsumerState<_DishGrid> createState() => _DishGridState();
+}
+
+class _DishGridState extends ConsumerState<_DishGrid> {
+  int _reportedPage = -1;
+  int _reportedLast = -1;
+
+  @override
+  Widget build(BuildContext context) {
+    final menuAsync = ref.watch(menuProvider(widget.filter));
 
     return menuAsync.when(
       loading: () => const SliverToBoxAdapter(
@@ -305,10 +394,21 @@ class _DishGrid extends ConsumerWidget {
       error: (err, _) => SliverToBoxAdapter(
         child: _ErrorState(
           message: '$err',
-          onRetry: () => ref.invalidate(menuProvider(filter)),
+          onRetry: () => ref.invalidate(menuProvider(widget.filter)),
         ),
       ),
       data: (paged) {
+        // Báo cho parent biết current/last page (chỉ khi đổi).
+        final cp = paged.meta.currentPage;
+        final lp = paged.meta.lastPage;
+        if (cp != _reportedPage || lp != _reportedLast) {
+          _reportedPage = cp;
+          _reportedLast = lp;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) widget.onPaginationChanged(cp, lp);
+          });
+        }
+
         if (paged.items.isEmpty) {
           return const SliverToBoxAdapter(child: _EmptyState());
         }
@@ -316,20 +416,100 @@ class _DishGrid extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(
             horizontal: AppConstants.spaceMd,
           ),
-          sliver: SliverGrid(
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: AppConstants.spaceSm,
-              mainAxisSpacing: AppConstants.spaceSm,
-              childAspectRatio: 0.72,
-            ),
-            delegate: SliverChildBuilderDelegate(
-              (context, index) => _DishCard(dish: paged.items[index]),
-              childCount: paged.items.length,
-            ),
+          sliver: SliverList.separated(
+            itemCount: paged.items.length,
+            separatorBuilder: (_, __) =>
+                const SizedBox(height: AppConstants.spaceSm),
+            itemBuilder: (context, index) =>
+                _DishCard(dish: paged.items[index]),
           ),
         );
       },
+    );
+  }
+}
+
+// ===========================================================================
+// SEARCH BAR
+// ===========================================================================
+
+class _SearchBar extends StatelessWidget {
+  const _SearchBar({
+    required this.controller,
+    required this.onChanged,
+    required this.onClear,
+  });
+
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppConstants.spaceMd,
+        AppConstants.spaceMd,
+        AppConstants.spaceMd,
+        0,
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(AppConstants.radius),
+          border: Border.all(color: const Color(0xFFE7E5E4)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 4,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+        child: TextField(
+          controller: controller,
+          onChanged: onChanged,
+          textInputAction: TextInputAction.search,
+          style: const TextStyle(
+            fontSize: 14,
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.w600,
+          ),
+          decoration: InputDecoration(
+            hintText: 'Tìm món...',
+            hintStyle: const TextStyle(
+              color: AppColors.textMuted,
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
+            prefixIcon: const Icon(
+              Icons.search,
+              size: 20,
+              color: AppColors.textMuted,
+            ),
+            suffixIcon: ValueListenableBuilder<TextEditingValue>(
+              valueListenable: controller,
+              builder: (context, value, _) {
+                if (value.text.isEmpty) return const SizedBox.shrink();
+                return IconButton(
+                  onPressed: onClear,
+                  icon: const Icon(
+                    Icons.close,
+                    size: 18,
+                    color: AppColors.textMuted,
+                  ),
+                  tooltip: 'Xoá',
+                );
+              },
+            ),
+            border: InputBorder.none,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 12,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -365,152 +545,176 @@ class _DishCard extends StatelessWidget {
     final hasDiscount = dish.hasDiscount;
     final finalPrice = dish.currentPrice;
 
-    return Material(
-      color: AppColors.surface,
-      borderRadius: BorderRadius.circular(AppConstants.radius),
-      elevation: 1,
-      shadowColor: Colors.black.withValues(alpha: 0.06),
-      child: InkWell(
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
         borderRadius: BorderRadius.circular(AppConstants.radius),
-        onTap: () => context.push(AppRoutes.dishDetailPath(dish.id)),
-        child: Padding(
-          padding: const EdgeInsets.all(AppConstants.spaceMd),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  AspectRatio(
-                    aspectRatio: 1,
-                    child: ClipRRect(
-                      borderRadius:
-                          BorderRadius.circular(AppConstants.radiusSm),
-                      child: dish.image != null && dish.image!.isNotEmpty
-                          ? Image.network(
-                              dish.image!,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) =>
-                                  _placeholder(slug: dish.category?.slug),
-                              loadingBuilder: (context, child, p) {
-                                if (p == null) return child;
-                                return _placeholder(
-                                    slug: dish.category?.slug,
-                                    isLoading: true);
-                              },
-                            )
-                          : _placeholder(slug: dish.category?.slug),
+        border: Border.all(color: const Color(0xFFF5F5F4)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppConstants.radius),
+          onTap: () => context.push(AppRoutes.dishDetailPath(dish.id)),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Ảnh trên
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: SizedBox(
+                    height: 140,
+                    width: double.infinity,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        dish.image != null && dish.image!.isNotEmpty
+                            ? Image.network(
+                                dish.image!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) =>
+                                    _placeholder(slug: dish.category?.slug),
+                                loadingBuilder: (context, child, p) {
+                                  if (p == null) return child;
+                                  return _placeholder(
+                                      slug: dish.category?.slug,
+                                      isLoading: true);
+                                },
+                              )
+                            : _placeholder(slug: dish.category?.slug),
+                        if (dish.isFeatured)
+                          Positioned(
+                            top: 8,
+                            left: 8,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryStrong,
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: const Text(
+                                'NỔI BẬT',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 0.1,
+                                ),
+                              ),
+                            ),
+                          ),
+                        if (!dish.isAvailable)
+                          Positioned.fill(
+                            child: Container(
+                              color: Colors.black.withValues(alpha: 0.45),
+                              alignment: Alignment.center,
+                              child: const Text(
+                                'HẾT MÓN',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 0.14,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
-                  if (dish.isFeatured)
-                    Positioned(
-                      top: 6,
-                      right: 6,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryStrong,
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: const Text(
-                          'NỔI BẬT',
-                          style: TextStyle(
-                            color: AppColors.gold,
-                            fontSize: 9,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 0.12,
+                ),
+                const SizedBox(height: 12),
+                // Tên món
+                Text(
+                  dish.name,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                // Mô tả
+                Text(
+                  dish.description ?? '',
+                  style: const TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 11,
+                    height: 1.4,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 12),
+                // Giá + nút +
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (hasDiscount)
+                            Text(
+                              _formatPrice(dish.price),
+                              style: const TextStyle(
+                                color: AppColors.textMuted,
+                                fontSize: 11,
+                                decoration: TextDecoration.lineThrough,
+                                decorationColor: AppColors.textMuted,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          Text(
+                            _formatPrice(finalPrice),
+                            style: const TextStyle(
+                              color: AppColors.primaryStrong,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                            ),
                           ),
-                        ),
+                        ],
                       ),
                     ),
-                  if (!dish.isAvailable)
-                    Positioned.fill(
+                    InkWell(
+                      onTap: () => context.push(AppRoutes.dishDetailPath(dish.id)),
+                      borderRadius: BorderRadius.circular(999),
                       child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.45),
-                          borderRadius:
-                              BorderRadius.circular(AppConstants.radiusSm),
+                        width: 36,
+                        height: 36,
+                        decoration: const BoxDecoration(
+                          color: AppColors.primaryStrong,
+                          shape: BoxShape.circle,
                         ),
                         alignment: Alignment.center,
-                        child: const Text(
-                          'HẾT MÓN',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 0.14,
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Text(
-                dish.name,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w900,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                dish.description ?? '',
-                style: const TextStyle(
-                  color: AppColors.textMuted,
-                  fontSize: 11,
-                  height: 1.35,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const Spacer(),
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  Flexible(
-                    child: Text(
-                      _formatPrice(finalPrice),
-                      style: TextStyle(
-                        color: AppColors.accentStrong,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w900,
-                        decoration: hasDiscount
-                            ? TextDecoration.lineThrough
-                            : null,
-                        decorationColor: AppColors.textMuted,
-                      ),
-                    ),
-                  ),
-                  if (hasDiscount) ...[
-                    const SizedBox(width: 4),
-                    Flexible(
-                      child: Text(
-                        _formatPrice(dish.price),
-                        style: const TextStyle(
-                          color: AppColors.accentStrong,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w900,
+                        child: const Icon(
+                          Icons.add,
+                          color: Colors.white,
+                          size: 22,
                         ),
                       ),
                     ),
                   ],
-                  const Spacer(),
-                  Icon(
-                    Icons.add_circle,
-                    color: AppColors.primary,
-                    size: 22,
-                  ),
-                ],
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -641,6 +845,200 @@ class _ErrorState extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ===========================================================================
+// PAGINATION BAR
+// ===========================================================================
+
+class _PaginationBar extends StatelessWidget {
+  const _PaginationBar({
+    required this.currentPage,
+    required this.lastPage,
+    required this.onPageChanged,
+  });
+
+  final int currentPage;
+  final int lastPage;
+  final ValueChanged<int> onPageChanged;
+
+  List<int> _buildPageList() {
+    if (lastPage <= 1) return const [];
+    final pages = <int>{};
+    // Luôn hiển thị trang đầu, cuối, và quanh trang hiện tại.
+    pages.add(1);
+    pages.add(lastPage);
+    for (var i = currentPage - 1; i <= currentPage + 1; i++) {
+      if (i >= 1 && i <= lastPage) pages.add(i);
+    }
+    final list = pages.toList()..sort();
+    return list;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (lastPage <= 1) return const SizedBox.shrink();
+
+    final pageList = _buildPageList();
+    final hasPrev = currentPage > 1;
+    final hasNext = currentPage < lastPage;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppConstants.spaceMd,
+        AppConstants.spaceLg,
+        AppConstants.spaceMd,
+        0,
+      ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 8,
+          vertical: 10,
+        ),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(AppConstants.radius),
+          border: Border.all(color: const Color(0xFFE7E5E4)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 4,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Nút Previous
+            _PaginationButton(
+              icon: Icons.chevron_left,
+              enabled: hasPrev,
+              onTap: () => onPageChanged(currentPage - 1),
+              tooltip: 'Trang trước',
+            ),
+            const SizedBox(width: 4),
+            // Các trang
+            ..._buildPageWidgets(pageList),
+            const SizedBox(width: 4),
+            // Nút Next
+            _PaginationButton(
+              icon: Icons.chevron_right,
+              enabled: hasNext,
+              onTap: () => onPageChanged(currentPage + 1),
+              tooltip: 'Trang sau',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildPageWidgets(List<int> pages) {
+    final widgets = <Widget>[];
+    for (var i = 0; i < pages.length; i++) {
+      final page = pages[i];
+      // Thêm dấu "..." nếu trang trước không liền kề.
+      if (i > 0 && pages[i - 1] != page - 1) {
+        widgets.add(const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 4),
+          child: Text(
+            '...',
+            style: TextStyle(
+              color: AppColors.textMuted,
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ));
+      }
+      widgets.add(_PageNumber(
+        page: page,
+        isSelected: page == currentPage,
+        onTap: () => onPageChanged(page),
+      ));
+    }
+    return widgets;
+  }
+}
+
+class _PageNumber extends StatelessWidget {
+  const _PageNumber({
+    required this.page,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final int page;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          width: 34,
+          height: 34,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.primaryStrong : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            '$page',
+            style: TextStyle(
+              color: isSelected ? Colors.white : AppColors.textPrimary,
+              fontSize: 13,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PaginationButton extends StatelessWidget {
+  const _PaginationButton({
+    required this.icon,
+    required this.enabled,
+    required this.onTap,
+    required this.tooltip,
+  });
+
+  final IconData icon;
+  final bool enabled;
+  final VoidCallback onTap;
+  final String tooltip;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: enabled ? onTap : null,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          width: 34,
+          height: 34,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: AppColors.primaryStrong.withValues(alpha: enabled ? 1 : 0.3),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            icon,
+            size: 18,
+            color: Colors.white,
+          ),
+        ),
       ),
     );
   }

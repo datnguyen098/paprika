@@ -33,4 +33,7 @@ flutter:
   assets:
     - assets/images/
     - assets/images/placeholders/
+    - assets/images/logo-hs.webp
+    - assets/images/wordmark.webp
+    - assets/images/logo-hs-card.webp
     - assets/icons/

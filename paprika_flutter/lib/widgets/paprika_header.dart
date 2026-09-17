@@ -168,30 +168,52 @@ class _PaprikaHeaderState extends ConsumerState<PaprikaHeader> {
     return InkWell(
       onTap: () => _go(context, AppRoutes.home),
       borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.local_fire_department,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Logo tròn 48x48 với nền trắng + shadow + viền trắng (giống PHP)
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
               color: Colors.white,
-              size: 26,
-            ),
-            const SizedBox(width: 4),
-            const Text(
-              'paprika',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 22,
-                fontWeight: FontWeight.w900,
-                fontStyle: FontStyle.italic,
-                letterSpacing: -0.5,
-                height: 1.0,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.18),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.3),
+                width: 1,
               ),
             ),
-          ],
-        ),
+            padding: const EdgeInsets.all(3),
+            child: ClipOval(
+              child: Image.asset(
+                AppConstants.logoHeader,
+                fit: BoxFit.contain,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          // Wordmark - ảnh "Paprika" viết tay (h-8 mobile, h-9 desktop như PHP)
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final wordmarkHeight = constraints.maxWidth >= 768 ? 36.0 : 32.0;
+              return SizedBox(
+                height: wordmarkHeight,
+                child: Image.asset(
+                  AppConstants.wordmark,
+                  fit: BoxFit.contain,
+                  alignment: Alignment.centerLeft,
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
