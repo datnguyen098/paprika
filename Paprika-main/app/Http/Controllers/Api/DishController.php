@@ -133,9 +133,21 @@ class DishController extends Controller
 
     /**
      * Chi tiết món ăn
-     * 
+     *
      * API: GET /api/v1/dishes/{id}
-     * 
+     *
+     * Response đầy đủ để Flutter render trang chi tiết (mirror với
+     * storefront/menu/show.blade.php):
+     *   - id/name/slug/description/content/ingredients
+     *   - price/sale_price/image/gallery + image_srcset + image_fallback
+     *   - is_featured + category
+     *   - availability.available/label/time_slots
+     *   - options (option groups + options)
+     *   - nutrition (calories + macros, port từ hardcoded table ở blade)
+     *   - allergens (gluten/dairy/soy/sesame/egg/mustard, port từ blade)
+     *   - related_dishes (tối đa 4 món, deduped related + pairing)
+     *   - breadcrumbs, seo, prep_label/branch_label (cho stats row)
+     *
      * @param Request $request
      * @param int $id
      * @return JsonResponse
@@ -144,10 +156,9 @@ class DishController extends Controller
     {
         $dish = Dish::query()
             ->with([
-                'category',
+                'category.translations',
                 'translations',
-                'activeOptionGroups.options',
-                'activeOptionGroups.translations',
+                'activeOptionGroups.options.translations',
                 'timeSlots',
             ])
             ->find($id);
@@ -159,16 +170,36 @@ class DishController extends Controller
             ], 404);
         }
 
-        // Thông tin availability
+        // Availability theo branch đang active (nếu có).
         $branch = active_branch();
         $availability = $branch ? $this->availability->check($dish, $branch) : null;
+
+        // Related + pairing (giống Storefront\MenuController::show).
+        $relatedDishes = $this->resolveRelatedDishes($dish);
+
+        // SEO meta.
+        $dishName = $dish->localized('name');
+        $ogImage = media_variant_path($dish->image, 'hero') ?? $dish->image;
+        $seo = [
+            'title' => $dish->localized('meta_title') ?: "{$dishName} | Paprika Patras",
+            'description' => $dish->localized('meta_description') ?: $dish->localized('description'),
+            'keywords' => $dish->localized('meta_keywords') ?: "Paprika Patras, {$dishName}",
+            'og_image' => $this->imageUrl($ogImage),
+        ];
+
+        // Breadcrumbs.
+        $breadcrumbs = [
+            ['label' => __('site.dish_detail.breadcrumb_home'), 'url' => url('/'.current_locale())],
+            ['label' => __('site.dish_detail.breadcrumb_menu'), 'url' => url('/'.current_locale().'/thuc-don')],
+            ['label' => $dishName, 'url' => null],
+        ];
 
         return response()->json([
             'success' => true,
             'message' => 'Lấy chi tiết món ăn thành công',
             'data' => [
                 'id' => $dish->id,
-                'name' => $dish->localized('name'),
+                'name' => $dishName,
                 'slug' => $dish->slug,
                 'description' => $dish->localized('description'),
                 'content' => $dish->localized('content'),
@@ -176,6 +207,8 @@ class DishController extends Controller
                 'price' => (int) $dish->price,
                 'sale_price' => $dish->sale_price ? (int) $dish->sale_price : null,
                 'image' => $this->imageUrl($dish->image),
+                'image_srcset' => $this->buildImageSrcset($dish->image),
+                'image_fallback' => $this->imageUrl(media_variant_path($dish->image, 'card')) ?? $this->imageUrl('paprika/cover.jpg'),
                 'gallery' => $dish->gallery
                     ? collect($dish->gallery)->map(fn ($img) => $this->imageUrl($img))->all()
                     : [],
@@ -204,16 +237,156 @@ class DishController extends Controller
                         'is_required' => $group->is_required,
                         'min_select' => $group->min_select,
                         'max_select' => $group->max_select,
+                        'hint' => match ($group->type) {
+                            DishOptionGroup::TYPE_SINGLE => __('site.dish_detail.hint_single'),
+                            DishOptionGroup::TYPE_EXCLUDE => __('site.dish_detail.hint_exclude'),
+                            default => __('site.dish_detail.hint_multiple'),
+                        },
                         'options' => $group->options->map(fn ($opt) => [
                             'id' => $opt->id,
                             'name' => $opt->localized('name'),
+                            'description' => $opt->localized('description'),
                             'price_delta' => (int) $opt->price_delta,
                             'is_default' => $opt->is_default,
                         ]),
                     ];
                 }),
+                'nutrition' => $this->buildNutrition($dish),
+                'allergens' => $this->buildAllergens($dish),
+                'related_dishes' => $relatedDishes->map(fn (Dish $d) => $this->transformDishSummary($d))->values(),
+                'stats' => [
+                    'prep_label' => __('site.dish_detail.prep'),
+                    'prep_value' => __('site.dish_detail.prep_value'),
+                    'energy_label' => __('site.dish_detail.energy'),
+                    'energy_value' => $this->buildNutrition($dish)['calories'].' kcal',
+                    'branch_label' => __('site.dish_detail.branch'),
+                    'branch_value' => $branch?->name ?? __('site.dish_detail.branch_value'),
+                ],
+                'breadcrumbs' => $breadcrumbs,
+                'seo' => $seo,
             ],
         ]);
+    }
+
+    /**
+     * Resolve related + pairing dishes (mirror Storefront\MenuController::show).
+     * Trả về tối đa 4 món distinct.
+     */
+    protected function resolveRelatedDishes(Dish $dish): \Illuminate\Support\Collection
+    {
+        $related = Dish::query()
+            ->with(['category.translations', 'translations', 'activeOptionGroups.options.translations'])
+            ->active()
+            ->where('category_id', $dish->category_id)
+            ->whereKeyNot($dish->getKey())
+            ->orderByDesc('is_featured')
+            ->orderBy('sort_order')
+            ->limit(4)
+            ->get();
+
+        $pairing = Dish::query()
+            ->with(['category.translations', 'translations', 'activeOptionGroups.options.translations'])
+            ->active()
+            ->featured()
+            ->whereKeyNot($dish->getKey())
+            ->where('category_id', '!=', $dish->category_id)
+            ->orderBy('sort_order')
+            ->limit(4)
+            ->get();
+
+        return $related->merge($pairing)->unique('id')->take(4);
+    }
+
+    /**
+     * Build srcset array từ image variants (card / large / hero).
+     * Mỗi entry: { variant, url, width }.
+     */
+    protected function buildImageSrcset(?string $imagePath): array
+    {
+        if (!$imagePath) {
+            return [];
+        }
+
+        $variants = [
+            ['variant' => 'card', 'width' => 480],
+            ['variant' => 'large', 'width' => 960],
+            ['variant' => 'hero', 'width' => 1600],
+        ];
+
+        return collect($variants)->map(function ($v) use ($imagePath) {
+            $variantPath = media_variant_path($imagePath, $v['variant']);
+            return [
+                'variant' => $v['variant'],
+                // Route qua /api/v1/images/ để có CORS + trả absolute URL cho Flutter.
+                'url' => $this->imageUrl($variantPath),
+                'width' => $v['width'],
+            ];
+        })->all();
+    }
+
+    /**
+     * Port từ storefront/menu/show.blade.php - tính calories/macros theo slug.
+     *
+     * Cấu trúc trả về:
+     *   - calories: int (kcal)
+     *   - rows: [{ key, label, value }]
+     */
+    protected function buildNutrition(Dish $dish): array
+    {
+        $slug = $dish->slug;
+        $categorySlug = $dish->category?->slug ?? 'do-an-viet-nam';
+
+        $caloriesTable = [
+            'beef-pho' => 540,
+            'chicken-pho' => 470,
+            'fried-nem' => 410,
+            'pho-rolls' => 320,
+            'banh-mi' => 520,
+            'greek-salad' => 360,
+            'souvlaki-skewers' => 390,
+            'gyros' => 640,
+            'bifteki' => 610,
+            'lamb-chops' => 720,
+            'mineral-water' => 0,
+            'soft-drink' => 140,
+            'iced-tea' => 110,
+            'greek-coffee' => 60,
+        ];
+
+        $calories = $caloriesTable[$slug] ?? ($categorySlug === 'do-uong' ? 120 : 520);
+        $factor = max($calories, 80) / 1000;
+
+        return [
+            'calories' => $calories,
+            'rows' => [
+                ['key' => 'energy', 'label' => __('site.dish_detail.nutrition_energy'), 'value' => number_format($calories * 4.184, 0, ',', '.').' kJ / '.$calories.' kcal'],
+                ['key' => 'fat', 'label' => __('site.dish_detail.nutrition_fat'), 'value' => number_format(30 * $factor, 1, ',', '.').' g'],
+                ['key' => 'carbs', 'label' => __('site.dish_detail.nutrition_carbs'), 'value' => number_format(46 * $factor, 1, ',', '.').' g'],
+                ['key' => 'protein', 'label' => __('site.dish_detail.nutrition_protein'), 'value' => number_format(24 * $factor, 1, ',', '.').' g'],
+                ['key' => 'salt', 'label' => __('site.dish_detail.nutrition_salt'), 'value' => number_format(1.7 * $factor, 2, ',', '.').' g'],
+            ],
+        ];
+    }
+
+    /**
+     * Port từ storefront/menu/show.blade.php - 6 allergens chính.
+     *
+     * Cấu trúc trả về:
+     *   [{ key, name, contains, warning }]
+     */
+    protected function buildAllergens(Dish $dish): array
+    {
+        $slug = $dish->slug;
+        $categorySlug = $dish->category?->slug ?? '';
+
+        return [
+            ['key' => 'gluten', 'name' => __('site.dish_detail.allergen_gluten'), 'contains' => in_array($slug, ['banh-mi', 'gyros', 'fried-nem'], true)],
+            ['key' => 'dairy', 'name' => __('site.dish_detail.allergen_dairy'), 'contains' => in_array($slug, ['greek-salad', 'gyros'], true)],
+            ['key' => 'soy', 'name' => __('site.dish_detail.allergen_soy'), 'contains' => $categorySlug === 'do-an-viet-nam'],
+            ['key' => 'sesame', 'name' => __('site.dish_detail.allergen_sesame'), 'contains' => in_array($slug, ['banh-mi', 'pho-rolls', 'souvlaki-skewers'], true)],
+            ['key' => 'egg', 'name' => __('site.dish_detail.allergen_egg'), 'contains' => in_array($slug, ['fried-nem', 'banh-mi'], true)],
+            ['key' => 'mustard', 'name' => __('site.dish_detail.allergen_mustard'), 'contains' => $categorySlug === 'do-an-hy-lap'],
+        ];
     }
 
     /**

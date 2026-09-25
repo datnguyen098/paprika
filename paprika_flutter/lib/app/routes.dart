@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../screens/about_screen.dart';
+import '../screens/allergen_settings_screen.dart';
 import '../screens/branch_detail_screen.dart';
 import '../screens/branches_screen.dart';
 import '../screens/contact_screen.dart';
+import '../screens/dish_detail_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/menu_screen.dart';
 import '../screens/reservation_screen.dart';
@@ -39,6 +41,7 @@ class AppRoutes {
   static const String reservations = '/reservations';
   static const String notifications = '/notifications';
   static const String contact = '/contact';
+  static const String allergenSettings = '/profile/allergens';
 
   // ==================== Helper builders ====================
   static String dishDetailPath(int id) => '/dish/$id';
@@ -72,6 +75,18 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.menu,
         builder: (context, state) => const MenuScreen(),
+      ),
+      // Chi tiết món ăn - mirror với storefront/menu/show.blade.php
+      GoRoute(
+        path: AppRoutes.dishDetail,
+        builder: (context, state) {
+          final idStr = state.pathParameters['id'];
+          final id = int.tryParse(idStr ?? '');
+          if (id == null) {
+            return const _ErrorScreen(error: 'ID món không hợp lệ');
+          }
+          return DishDetailScreen(dishId: id);
+        },
       ),
       // Reservation — đặt bàn, có form + quick actions
       GoRoute(
@@ -108,6 +123,12 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.contact,
         builder: (context, state) => const ContactScreen(),
+      ),
+
+      // Quan ly di ung
+      GoRoute(
+        path: AppRoutes.allergenSettings,
+        builder: (context, state) => const AllergenSettingsScreen(),
       ),
     ],
   );
