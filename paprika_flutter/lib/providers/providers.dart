@@ -4,17 +4,21 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../core/i18n/locale_controller.dart';
 import '../data/models/about_model.dart';
 import '../data/models/branch_model.dart';
+import '../data/models/cart_model.dart';
 import '../data/models/category_model.dart';
 import '../data/models/contact_model.dart';
 import '../data/models/dish_model.dart';
 import '../data/models/home_model.dart';
 import '../data/models/menu_response.dart';
+import '../data/models/order_model.dart';
 import '../data/repositories/about_repository.dart';
 import '../data/repositories/branch_repository.dart';
+import '../data/repositories/cart_repository.dart';
 import '../data/repositories/category_repository.dart';
 import '../data/repositories/contact_repository.dart';
 import '../data/repositories/dish_repository.dart';
 import '../data/repositories/home_repository.dart';
+import '../data/repositories/order_repository.dart';
 import '../services/api_service.dart';
 import '../services/storage_service.dart';
 
@@ -63,6 +67,14 @@ final aboutRepositoryProvider = Provider<AboutRepository>((ref) {
 
 final contactRepositoryProvider = Provider<ContactRepository>((ref) {
   return ContactRepository(ref.watch(apiServiceProvider));
+});
+
+final cartRepositoryProvider = Provider<CartRepository>((ref) {
+  return CartRepository(ref.watch(sharedPrefsProvider));
+});
+
+final orderRepositoryProvider = Provider<OrderRepository>((ref) {
+  return OrderRepository(ref.watch(apiServiceProvider));
 });
 
 // ============================================================
@@ -214,6 +226,45 @@ final dishDetailProvider =
     FutureProvider.autoDispose.family<DishDetail, int>((ref, id) async {
   ref.watch(localeProvider);
   return ref.watch(dishRepositoryProvider).getDishDetail(id);
+});
+
+class CartController extends StateNotifier<CartData> {
+  CartController(this._repository) : super(_repository.getCart());
+
+  final CartRepository _repository;
+
+  Future<void> addItem(CartItem item) async {
+    state = await _repository.addItem(item);
+  }
+
+  Future<void> updateQuantity(String lineKey, int quantity) async {
+    state = await _repository.updateQuantity(lineKey, quantity);
+  }
+
+  Future<void> removeItem(String lineKey) async {
+    state = await _repository.removeItem(lineKey);
+  }
+
+  Future<void> clear() async {
+    state = await _repository.clear();
+  }
+
+  void reload() {
+    state = _repository.getCart();
+  }
+}
+
+final cartProvider = StateNotifierProvider<CartController, CartData>((ref) {
+  return CartController(ref.watch(cartRepositoryProvider));
+});
+
+final cartCountProvider = Provider<int>((ref) {
+  return ref.watch(cartProvider).count;
+});
+
+final createOrderProvider = FutureProvider.autoDispose
+    .family<OrderResponse, CreateOrderRequest>((ref, request) async {
+  return ref.watch(orderRepositoryProvider).createOrder(request);
 });
 
 // ============================================================

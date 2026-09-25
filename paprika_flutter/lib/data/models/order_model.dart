@@ -1,74 +1,130 @@
-import 'package:equatable/equatable.dart';
+import 'cart_model.dart';
 
-enum OrderStatus { pending, confirmed, preparing, delivering, completed, cancelled }
-
-extension OrderStatusX on OrderStatus {
-  String get labelVi {
-    switch (this) {
-      case OrderStatus.pending:
-        return 'Chờ xác nhận';
-      case OrderStatus.confirmed:
-        return 'Đã xác nhận';
-      case OrderStatus.preparing:
-        return 'Đang chuẩn bị';
-      case OrderStatus.delivering:
-        return 'Đang giao';
-      case OrderStatus.completed:
-        return 'Hoàn thành';
-      case OrderStatus.cancelled:
-        return 'Đã hủy';
-    }
-  }
-}
-
-class Order extends Equatable {
-  final int id;
-  final String orderCode;
-  final List<OrderItem> items;
-  final int subtotal;
-  final int shippingFee;
-  final int total;
-  final OrderStatus status;
-  final DateTime createdAt;
-  final String? address;
-  final String? phone;
-  final String? note;
-
-  const Order({
-    required this.id,
-    required this.orderCode,
+class CreateOrderRequest {
+  const CreateOrderRequest({
+    required this.branchId,
+    required this.customerName,
+    required this.customerPhone,
+    required this.fulfillmentMethod,
     required this.items,
-    required this.subtotal,
-    required this.shippingFee,
-    required this.total,
-    required this.status,
-    required this.createdAt,
-    this.address,
-    this.phone,
+    this.customerEmail,
+    this.deliveryAddress,
+    this.requestedDate,
+    this.requestedTime,
     this.note,
   });
 
-  @override
-  List<Object?> get props => [id, status];
+  final int branchId;
+  final String customerName;
+  final String customerPhone;
+  final String? customerEmail;
+  final String fulfillmentMethod;
+  final String? deliveryAddress;
+  final String? requestedDate;
+  final String? requestedTime;
+  final String? note;
+  final List<CartItem> items;
+
+  Map<String, dynamic> toJson() => {
+        'branch_id': branchId,
+        'customer_name': customerName.trim(),
+        'customer_phone': customerPhone.trim(),
+        'customer_email':
+            customerEmail == null || customerEmail!.trim().isEmpty
+                ? null
+                : customerEmail!.trim(),
+        'fulfillment_method': fulfillmentMethod,
+        'delivery_address':
+            deliveryAddress == null || deliveryAddress!.trim().isEmpty
+                ? null
+                : deliveryAddress!.trim(),
+        'requested_date': requestedDate,
+        'requested_time': requestedTime,
+        'note': note == null || note!.trim().isEmpty ? null : note!.trim(),
+        'items': items.map((item) => item.toOrderJson()).toList(),
+      };
 }
 
-class OrderItem extends Equatable {
-  final int dishId;
-  final String dishName;
-  final String? dishImage;
-  final int price;
-  final int quantity;
-
-  const OrderItem({
-    required this.dishId,
-    required this.dishName,
-    this.dishImage,
-    required this.price,
-    required this.quantity,
+class OrderResponse {
+  const OrderResponse({
+    required this.id,
+    required this.code,
+    required this.status,
+    required this.paymentMethod,
+    required this.paymentStatus,
+    required this.fulfillmentMethod,
+    required this.subtotal,
+    required this.shippingFee,
+    required this.discountTotal,
+    required this.total,
+    required this.customerName,
+    required this.customerPhone,
+    this.deliveryAddress,
+    this.invoiceNumber,
+    this.branch,
+    this.createdAt,
   });
 
-  int get totalPrice => price * quantity;
+  final int id;
+  final String code;
+  final String status;
+  final String paymentMethod;
+  final String paymentStatus;
+  final String fulfillmentMethod;
+  final int subtotal;
+  final int shippingFee;
+  final int discountTotal;
+  final int total;
+  final String customerName;
+  final String customerPhone;
+  final String? deliveryAddress;
+  final String? invoiceNumber;
+  final OrderBranch? branch;
+  final String? createdAt;
 
-  @override
-  List<Object?> get props => [dishId, quantity];
+  factory OrderResponse.fromJson(Map<String, dynamic> json) {
+    return OrderResponse(
+      id: (json['id'] as num?)?.toInt() ?? 0,
+      code: json['code'] as String? ?? '',
+      status: json['status'] as String? ?? '',
+      paymentMethod: json['payment_method'] as String? ?? 'offline',
+      paymentStatus: json['payment_status'] as String? ?? 'unpaid',
+      fulfillmentMethod: json['fulfillment_method'] as String? ?? 'pickup',
+      subtotal: (json['subtotal'] as num?)?.toInt() ?? 0,
+      shippingFee: (json['shipping_fee'] as num?)?.toInt() ?? 0,
+      discountTotal: (json['discount_total'] as num?)?.toInt() ?? 0,
+      total: (json['total'] as num?)?.toInt() ?? 0,
+      customerName: json['customer_name'] as String? ?? '',
+      customerPhone: json['customer_phone'] as String? ?? '',
+      deliveryAddress: json['delivery_address'] as String?,
+      invoiceNumber: json['invoice_number'] as String?,
+      branch: json['branch'] is Map<String, dynamic>
+          ? OrderBranch.fromJson(json['branch'] as Map<String, dynamic>)
+          : null,
+      createdAt: json['created_at'] as String?,
+    );
+  }
+}
+
+class OrderBranch {
+  const OrderBranch({
+    required this.id,
+    required this.name,
+    this.address,
+    this.phone,
+  });
+
+  final int id;
+  final String name;
+  final String? address;
+  final String? phone;
+
+  factory OrderBranch.fromJson(Map<String, dynamic> json) {
+    return OrderBranch(
+      id: (json['id'] as num?)?.toInt() ?? 0,
+      name: json['name'] as String? ?? '',
+      address: json['address'] as String?,
+      phone: json['phone'] as String?,
+    );
+  }
 }

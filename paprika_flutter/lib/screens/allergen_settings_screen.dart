@@ -13,23 +13,23 @@ class AllergenSettingsScreen extends StatefulWidget {
 
 class _AllergenSettingsScreenState extends State<AllergenSettingsScreen> {
   static const String _prefsKey = 'user_allergens';
-  
+
   // Complete list of common allergens (EU regulation 1169/2011)
-  static const List<String> _allAllergens = [
-    'Gluten',
-    'Sữa',
-    'Trứng',
-    'Đậu nành',
-    'Mè',
-    'Mù tạt',
-    'Hải sản',
-    'Cá',
-    'Đậu phộng',
-    'Hạt cây',
-    'Lưu huỳnh',
-    'Cần tây',
-    'Động vật thân mềm',
-    'Lupin',
+  static const List<_AllergenOption> _allAllergens = [
+    _AllergenOption(key: 'gluten', label: 'Gluten'),
+    _AllergenOption(key: 'dairy', label: 'Sữa'),
+    _AllergenOption(key: 'egg', label: 'Trứng'),
+    _AllergenOption(key: 'soy', label: 'Đậu nành'),
+    _AllergenOption(key: 'sesame', label: 'Mè'),
+    _AllergenOption(key: 'mustard', label: 'Mù tạt'),
+    _AllergenOption(key: 'seafood', label: 'Hải sản'),
+    _AllergenOption(key: 'fish', label: 'Cá'),
+    _AllergenOption(key: 'peanut', label: 'Đậu phộng'),
+    _AllergenOption(key: 'tree_nuts', label: 'Hạt cây'),
+    _AllergenOption(key: 'sulphites', label: 'Lưu huỳnh'),
+    _AllergenOption(key: 'celery', label: 'Cần tây'),
+    _AllergenOption(key: 'molluscs', label: 'Động vật thân mềm'),
+    _AllergenOption(key: 'lupin', label: 'Lupin'),
   ];
 
   final Set<String> _selectedAllergens = {};
@@ -44,8 +44,17 @@ class _AllergenSettingsScreenState extends State<AllergenSettingsScreen> {
   Future<void> _loadPreferences() async {
     final prefs = await SharedPreferences.getInstance();
     final saved = prefs.getStringList(_prefsKey) ?? [];
+    final normalized = saved
+        .map(_allergenKeyForSavedValue)
+        .where((key) => key.isNotEmpty)
+        .toSet();
+    if (normalized.length != saved.length ||
+        normalized.any((key) => !saved.contains(key))) {
+      await prefs.setStringList(_prefsKey, normalized.toList());
+    }
+    if (!mounted) return;
     setState(() {
-      _selectedAllergens.addAll(saved);
+      _selectedAllergens.addAll(normalized);
       _isLoading = false;
     });
   }
@@ -53,7 +62,7 @@ class _AllergenSettingsScreenState extends State<AllergenSettingsScreen> {
   Future<void> _savePreferences() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList(_prefsKey, _selectedAllergens.toList());
-    
+
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -63,14 +72,60 @@ class _AllergenSettingsScreenState extends State<AllergenSettingsScreen> {
     );
   }
 
-  void _toggleAllergen(String allergen) {
+  void _toggleAllergen(String key) {
     setState(() {
-      if (_selectedAllergens.contains(allergen)) {
-        _selectedAllergens.remove(allergen);
+      if (_selectedAllergens.contains(key)) {
+        _selectedAllergens.remove(key);
       } else {
-        _selectedAllergens.add(allergen);
+        _selectedAllergens.add(key);
       }
     });
+  }
+
+  String _allergenKeyForSavedValue(String value) {
+    final normalized = value.trim().toLowerCase();
+    const legacyMap = {
+      'gluten': 'gluten',
+      'dairy': 'dairy',
+      'milk': 'dairy',
+      'sữa': 'dairy',
+      'egg': 'egg',
+      'eggs': 'egg',
+      'trứng': 'egg',
+      'soy': 'soy',
+      'soya': 'soy',
+      'đậu nành': 'soy',
+      'sesame': 'sesame',
+      'mè': 'sesame',
+      'mustard': 'mustard',
+      'mù tạt': 'mustard',
+      'seafood': 'seafood',
+      'hải sản': 'seafood',
+      'fish': 'fish',
+      'cá': 'fish',
+      'peanut': 'peanut',
+      'peanuts': 'peanut',
+      'đậu phộng': 'peanut',
+      'tree_nuts': 'tree_nuts',
+      'tree nuts': 'tree_nuts',
+      'hạt cây': 'tree_nuts',
+      'sulphites': 'sulphites',
+      'sulfites': 'sulphites',
+      'lưu huỳnh': 'sulphites',
+      'celery': 'celery',
+      'cần tây': 'celery',
+      'molluscs': 'molluscs',
+      'động vật thân mềm': 'molluscs',
+      'lupin': 'lupin',
+    };
+    return legacyMap[normalized] ?? normalized;
+  }
+
+  String _labelForKey(String key) {
+    for (final allergen in _allAllergens) {
+      if (allergen.key == key) return allergen.label;
+    }
+    return key;
   }
 
   @override
@@ -153,13 +208,13 @@ class _AllergenSettingsScreenState extends State<AllergenSettingsScreen> {
                 
                 // Allergen grid
                 ..._allAllergens.map((allergen) {
-                  final isSelected = _selectedAllergens.contains(allergen);
+                  final isSelected = _selectedAllergens.contains(allergen.key);
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 12),
                     child: Material(
                       color: Colors.transparent,
                       child: InkWell(
-                        onTap: () => _toggleAllergen(allergen),
+                        onTap: () => _toggleAllergen(allergen.key),
                         borderRadius: BorderRadius.circular(12),
                         child: Container(
                           padding: const EdgeInsets.all(16),
@@ -202,7 +257,7 @@ class _AllergenSettingsScreenState extends State<AllergenSettingsScreen> {
                               ),
                               const SizedBox(width: 12),
                               Text(
-                                allergen,
+                                allergen.label,
                                 style: TextStyle(
                                   color: isSelected 
                                       ? AppColors.accentStrong
@@ -256,7 +311,7 @@ class _AllergenSettingsScreenState extends State<AllergenSettingsScreen> {
                                 borderRadius: BorderRadius.circular(999),
                               ),
                               child: Text(
-                                allergen,
+                                _labelForKey(allergen),
                                 style: const TextStyle(
                                   color: AppColors.accentStrong,
                                   fontSize: 12,
@@ -273,4 +328,14 @@ class _AllergenSettingsScreenState extends State<AllergenSettingsScreen> {
             ),
     );
   }
+}
+
+class _AllergenOption {
+  const _AllergenOption({
+    required this.key,
+    required this.label,
+  });
+
+  final String key;
+  final String label;
 }

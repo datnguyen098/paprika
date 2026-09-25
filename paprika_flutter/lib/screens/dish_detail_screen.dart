@@ -7,8 +7,10 @@ import '../app/routes.dart';
 import '../core/constants/app_colors.dart';
 import '../core/constants/app_constants.dart';
 import '../core/utils/image_helper.dart';
+import '../data/models/cart_model.dart';
 import '../data/models/dish_model.dart';
 import '../providers/providers.dart';
+import '../widgets/cart_drawer.dart';
 
 /// DishDetailScreen — Trang chi tiết món ăn (mirror `storefront/menu/show.blade.php`).
 ///
@@ -43,9 +45,9 @@ class _DishDetailScreenState extends ConsumerState<DishDetailScreen> {
   /// Đã init từ defaults lần đầu chưa (tránh reset khi rebuild).
   bool _defaultsInitialized = false;
 
-  /// Các loại dị ứng user đã khai báo trong "Quản lý dị ứng"
-  /// (đọc từ SharedPreferences key `user_allergens`, tên tiếng Việt —
-  /// giống list ở [AllergenSettingsScreen]).
+  /// Các loại dị ứng user đã khai báo trong "Quản lý dị ứng".
+  /// Lưu bằng key ổn định (`gluten`, `dairy`, ...) để không bị lệch khi
+  /// đổi ngôn ngữ. Dữ liệu cũ lưu bằng tên tiếng Việt được normalize khi đọc.
   Set<String> _userAllergens = {};
 
   @override
@@ -58,7 +60,68 @@ class _DishDetailScreenState extends ConsumerState<DishDetailScreen> {
     final prefs = await SharedPreferences.getInstance();
     final saved = prefs.getStringList('user_allergens') ?? const [];
     if (!mounted) return;
-    setState(() => _userAllergens = saved.toSet());
+    setState(() => _userAllergens = _normalizeAllergenKeys(saved).toSet());
+  }
+
+  Future<void> _toggleUserAllergen(String key) async {
+    final normalized = _allergenKeyForSavedValue(key);
+    if (normalized.isEmpty) return;
+    final next = Set<String>.from(_userAllergens);
+    if (next.contains(normalized)) {
+      next.remove(normalized);
+    } else {
+      next.add(normalized);
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('user_allergens', next.toList());
+    if (!mounted) return;
+    setState(() => _userAllergens = next);
+  }
+
+  Iterable<String> _normalizeAllergenKeys(Iterable<String> values) {
+    return values
+        .map(_allergenKeyForSavedValue)
+        .where((key) => key.isNotEmpty);
+  }
+
+  String _allergenKeyForSavedValue(String value) {
+    final normalized = value.trim().toLowerCase();
+    const legacyMap = {
+      'gluten': 'gluten',
+      'dairy': 'dairy',
+      'milk': 'dairy',
+      'sữa': 'dairy',
+      'egg': 'egg',
+      'eggs': 'egg',
+      'trứng': 'egg',
+      'soy': 'soy',
+      'soya': 'soy',
+      'đậu nành': 'soy',
+      'sesame': 'sesame',
+      'mè': 'sesame',
+      'mustard': 'mustard',
+      'mù tạt': 'mustard',
+      'seafood': 'seafood',
+      'hải sản': 'seafood',
+      'fish': 'fish',
+      'cá': 'fish',
+      'peanut': 'peanut',
+      'peanuts': 'peanut',
+      'đậu phộng': 'peanut',
+      'tree_nuts': 'tree_nuts',
+      'tree nuts': 'tree_nuts',
+      'hạt cây': 'tree_nuts',
+      'sulphites': 'sulphites',
+      'sulfites': 'sulphites',
+      'lưu huỳnh': 'sulphites',
+      'celery': 'celery',
+      'cần tây': 'celery',
+      'molluscs': 'molluscs',
+      'động vật thân mềm': 'molluscs',
+      'lupin': 'lupin',
+    };
+    return legacyMap[normalized] ?? normalized;
   }
 
   @override
@@ -91,15 +154,13 @@ class _DishDetailScreenState extends ConsumerState<DishDetailScreen> {
     if (_quantity > 1) setState(() => _quantity--);
   }
 
-  /// Tap "Thêm vào giỏ" — hiện tại chỉ show snackbar, khi nào cart API xong
-  /// thì gọi _cartRepo.add(detail, _selectedOptions, _quantity, _noteController.text).
   void _onAddToCart() async {
     final detail = _currentDetail;
     if (detail == null) return;
 
     // Kiểm tra món có chứa allergen user tránh không
     final matchingAllergens = detail.allergens
-        .where((a) => a.contains && _userAllergens.contains(a.name))
+        .where((a) => a.contains && _userAllergens.contains(a.key))
         .toList();
 
     if (matchingAllergens.isNotEmpty) {
@@ -130,7 +191,7 @@ class _DishDetailScreenState extends ConsumerState<DishDetailScreen> {
               Text(
                 'Món này chứa ${matchingAllergens.map((a) => a.name).join(', ')} — bạn đã đánh dấu tránh trong "Quản lý dị ứng".',
                 style: const TextStyle(
-                  color: AppColors.textSecondary,
+                  color: AppColors.textMuted,
                   fontSize: 13,
                   height: 1.5,
                 ),
@@ -179,7 +240,14 @@ class _DishDetailScreenState extends ConsumerState<DishDetailScreen> {
       if (confirm != true) return; // User huỷ
     }
 
-    // Proceed với add to cart
+    final item = cartItemFromDishDetail(
+      detail: detail,
+      quantity: _quantity,
+      selectedOptions: _selectedOptions,
+      note: _noteController.text,
+    );
+    await ref.read(cartProvider.notifier).addItem(item);
+
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -191,7 +259,7 @@ class _DishDetailScreenState extends ConsumerState<DishDetailScreen> {
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                'Đã thêm ${_quantity}x ${detail.name} vào giỏ (TODO: nối cart API).',
+                'Đã thêm ${_quantity}x ${detail.name} vào giỏ.',
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 12,
@@ -203,6 +271,7 @@ class _DishDetailScreenState extends ConsumerState<DishDetailScreen> {
         ),
       ),
     );
+    await showCartDrawer(context);
   }
 
   void _toggleOption(DishOptionGroup group, DishOptionItem option) {
@@ -330,7 +399,9 @@ class _DishDetailScreenState extends ConsumerState<DishDetailScreen> {
           ),
         ),
         if (detail.relatedDishes.isNotEmpty)
-          SliverToBoxAdapter(child: _RelatedDishesRow(dishes: detail.relatedDishes)),
+          SliverToBoxAdapter(
+            child: _RelatedDishesRow(dishes: detail.relatedDishes),
+          ),
         const SliverToBoxAdapter(child: SizedBox(height: AppConstants.spaceLg)),
       ],
     );
@@ -348,11 +419,16 @@ class _DishDetailScreenState extends ConsumerState<DishDetailScreen> {
           summaryText: _summaryText(detail),
         );
       case _DetailTab.nutrition:
-        return _NutritionPanel(nutrition: detail.nutrition);
+        return _NutritionPanel(
+          nutrition: detail.nutrition,
+          ingredients: detail.ingredients,
+        );
       case _DetailTab.allergens:
         return _AllergensPanel(
           allergens: detail.allergens,
           userAllergens: _userAllergens,
+          onToggleAllergen: _toggleUserAllergen,
+          onPreferencesChanged: _loadUserAllergens,
         );
     }
   }
@@ -1313,91 +1389,140 @@ class _SummaryBox extends StatelessWidget {
 // ===========================================================================
 
 class _NutritionPanel extends StatelessWidget {
-  const _NutritionPanel({this.nutrition});
+  const _NutritionPanel({this.nutrition, this.ingredients});
   final DishNutrition? nutrition;
+  final String? ingredients;
 
   @override
   Widget build(BuildContext context) {
-    if (nutrition == null || nutrition!.rows.isEmpty) {
-      return const _EmptyPanelState(text: 'Chưa có thông tin dinh dưỡng.');
+    final cleanIngredients = ingredients?.trim();
+    if ((nutrition == null || nutrition!.rows.isEmpty) &&
+        (cleanIngredients == null || cleanIngredients.isEmpty)) {
+      return const _EmptyPanelState(text: 'Chưa có thông tin thành phần.');
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: const Color(0xFFFFF7E0),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFFCD34D)),
-          ),
-          child: const Row(
-            children: [
-              Icon(Icons.info_outline,
-                  color: Color(0xFF92400E), size: 18),
-              SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'Số liệu dinh dưỡng là giá trị ước tính trung bình, có thể thay đổi tùy khẩu phần và nguyên liệu thực tế.',
-                  style: TextStyle(
-                    color: Color(0xFF92400E),
-                    fontSize: 12,
-                    height: 1.45,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 14),
-        Container(
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0xFFE2D8C8)),
-          ),
-          child: Column(
-            children: [
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                decoration: const BoxDecoration(
-                  color: Color(0xFFF5F0E6),
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: const [
+        if (cleanIngredients != null && cleanIngredients.isNotEmpty) ...[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFE2D8C8)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.restaurant_menu,
+                        color: AppColors.primary, size: 18),
+                    SizedBox(width: 8),
                     Text(
                       'THÀNH PHẦN',
                       style: TextStyle(
-                        color: AppColors.textMuted,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0.8,
-                      ),
-                    ),
-                    Text(
-                      'GIÁ TRỊ',
-                      style: TextStyle(
-                        color: AppColors.textMuted,
-                        fontSize: 10,
+                        color: AppColors.primaryStrong,
+                        fontSize: 12,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 0.8,
                       ),
                     ),
                   ],
                 ),
-              ),
-              for (var i = 0; i < nutrition!.rows.length; i++) ...[
-                if (i > 0)
-                  const Divider(height: 1, color: Color(0xFFF1EADC)),
-                _NutritionRow(row: nutrition!.rows[i]),
+                const SizedBox(height: 8),
+                Text(
+                  cleanIngredients,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 13,
+                    height: 1.45,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ],
-            ],
+            ),
           ),
-        ),
+          const SizedBox(height: 14),
+        ],
+        if (nutrition != null && nutrition!.rows.isNotEmpty) ...[
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF7E0),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFFCD34D)),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.info_outline,
+                    color: Color(0xFF92400E), size: 18),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Số liệu dinh dưỡng là giá trị ước tính trung bình, có thể thay đổi tùy khẩu phần và nguyên liệu thực tế.',
+                    style: TextStyle(
+                      color: Color(0xFF92400E),
+                      fontSize: 12,
+                      height: 1.45,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFE2D8C8)),
+            ),
+            child: Column(
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF5F0E6),
+                    borderRadius:
+                        BorderRadius.vertical(top: Radius.circular(14)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: const [
+                      Text(
+                        'CHỈ SỐ',
+                        style: TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                      Text(
+                        'GIÁ TRỊ',
+                        style: TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                for (var i = 0; i < nutrition!.rows.length; i++) ...[
+                  if (i > 0)
+                    const Divider(height: 1, color: Color(0xFFF1EADC)),
+                  _NutritionRow(row: nutrition!.rows[i]),
+                ],
+              ],
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -1445,9 +1570,13 @@ class _AllergensPanel extends StatelessWidget {
   const _AllergensPanel({
     this.allergens = const [],
     this.userAllergens = const {},
+    this.onToggleAllergen,
+    this.onPreferencesChanged,
   });
   final List<DishAllergen> allergens;
   final Set<String> userAllergens;
+  final ValueChanged<String>? onToggleAllergen;
+  final Future<void> Function()? onPreferencesChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -1457,7 +1586,7 @@ class _AllergensPanel extends StatelessWidget {
 
     // Kiểm tra món có chứa allergen user tránh không
     final matchingAllergens = allergens
-        .where((a) => a.contains && userAllergens.contains(a.name))
+        .where((a) => a.contains && userAllergens.contains(a.key))
         .toList();
     final hasUserAllergen = matchingAllergens.isNotEmpty;
 
@@ -1503,7 +1632,10 @@ class _AllergensPanel extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       GestureDetector(
-                        onTap: () => context.push(AppRoutes.allergenSettings),
+                        onTap: () async {
+                          await context.push(AppRoutes.allergenSettings);
+                          await onPreferencesChanged?.call();
+                        },
                         child: const Text(
                           'Chỉnh sửa danh sách →',
                           style: TextStyle(
@@ -1551,7 +1683,7 @@ class _AllergensPanel extends StatelessWidget {
                     ),
                     SizedBox(height: 4),
                     Text(
-                      'Bếp chế biến trong môi trường có chứa các loại dị ứng thông thường. Nếu bạn có nhu cầu đặc biệt, hãy ghi chú ở phần ghi chú phía trên.',
+                      'Bếp chế biến trong môi trường có chứa các loại dị ứng thông thường. Chạm vào từng thành phần bên dưới để lưu vào danh sách dị ứng cá nhân.',
                       style: TextStyle(
                         color: Color(0xFF8F1F1B),
                         fontSize: 12,
@@ -1577,7 +1709,8 @@ class _AllergensPanel extends StatelessWidget {
             for (final a in allergens)
               _AllergenTile(
                 allergen: a,
-                isUserAllergen: userAllergens.contains(a.name),
+                isUserAllergen: userAllergens.contains(a.key),
+                onTap: () => onToggleAllergen?.call(a.key),
               ),
           ],
         ),
@@ -1590,9 +1723,11 @@ class _AllergenTile extends StatelessWidget {
   const _AllergenTile({
     required this.allergen,
     this.isUserAllergen = false,
+    this.onTap,
   });
   final DishAllergen allergen;
   final bool isUserAllergen;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -1600,60 +1735,85 @@ class _AllergenTile extends StatelessWidget {
     // Nếu món chứa allergen và user đã đánh dấu tránh → highlight đậm hơn
     final isDanger = contains && isUserAllergen;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: isDanger
-            ? AppColors.accentSoft
-            : AppColors.surface,
+    final borderColor = isDanger
+        ? AppColors.accent
+        : isUserAllergen
+            ? AppColors.primary
+            : (contains ? const Color(0xFFFCA5A5) : const Color(0xFFE2D8C8));
+    final backgroundColor = isDanger
+        ? AppColors.accentSoft
+        : isUserAllergen
+            ? AppColors.primary.withValues(alpha: 0.08)
+            : AppColors.surface;
+
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isDanger
-              ? AppColors.accent
-              : (contains ? const Color(0xFFFCA5A5) : const Color(0xFFE2D8C8)),
-          width: isDanger ? 2 : (contains ? 1.4 : 1),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: borderColor,
+              width: isDanger || isUserAllergen ? 2 : (contains ? 1.4 : 1),
+            ),
+          ),
+          child: Row(
+            children: [
+              if (isDanger) ...[
+                const Icon(Icons.warning_rounded,
+                    color: AppColors.accent, size: 14),
+                const SizedBox(width: 4),
+              ] else if (isUserAllergen) ...[
+                const Icon(Icons.check_circle,
+                    color: AppColors.primary, size: 14),
+                const SizedBox(width: 4),
+              ],
+              Expanded(
+                child: Text(
+                  allergen.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: isDanger
+                        ? AppColors.accentStrong
+                        : isUserAllergen
+                            ? AppColors.primaryStrong
+                            : (contains
+                                ? const Color(0xFF7F1D1D)
+                                : AppColors.textMuted),
+                    fontSize: 12,
+                    fontWeight: isDanger || isUserAllergen
+                        ? FontWeight.w900
+                        : FontWeight.w800,
+                    height: 1.2,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: contains ? AppColors.accent : const Color(0xFFF5F0E6),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  contains ? 'CÓ' : 'KHÔNG',
+                  style: TextStyle(
+                    color: contains ? Colors.white : AppColors.textMuted,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.4,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
-      child: Row(
-        children: [
-          // Icon cảnh báo nếu trùng với user
-          if (isDanger) ...[
-            const Icon(Icons.warning_rounded, color: AppColors.accent, size: 14),
-            const SizedBox(width: 4),
-          ],
-          Expanded(
-            child: Text(
-              allergen.name,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: isDanger
-                    ? AppColors.accentStrong
-                    : (contains ? const Color(0xFF7F1D1D) : AppColors.textMuted),
-                fontSize: 12,
-                fontWeight: isDanger ? FontWeight.w900 : FontWeight.w800,
-                height: 1.2,
-              ),
-            ),
-          ),
-          const SizedBox(width: 6),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: contains ? AppColors.accent : const Color(0xFFF5F0E6),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Text(
-              contains ? 'CÓ' : 'KHÔNG',
-              style: TextStyle(
-                color: contains ? Colors.white : AppColors.textMuted,
-                fontSize: 9,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0.4,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -1837,74 +1997,83 @@ class _RelatedDishesRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 20, 16, 10),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text(
-                    'CÓ THỂ BẠN CŨNG THÍCH',
-                    style: TextStyle(
-                      color: AppColors.accent,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.0,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 10),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    Text(
+                      'MÓN ĂN KÈM',
+                      style: TextStyle(
+                        color: AppColors.accent,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.0,
+                      ),
                     ),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    'Gợi ý cho bạn',
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -0.3,
+                    SizedBox(height: 4),
+                    Text(
+                      'Gợi ý gọi thêm',
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.3,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              InkWell(
-                onTap: () => context.push(AppRoutes.menu),
-                borderRadius: BorderRadius.circular(99),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: AppColors.primary),
-                    borderRadius: BorderRadius.circular(99),
-                  ),
-                  child: const Text(
-                    'Xem tất cả',
-                    style: TextStyle(
-                      color: AppColors.primary,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0.6,
+                  ],
+                ),
+                InkWell(
+                  onTap: () => context.push(AppRoutes.menu),
+                  borderRadius: BorderRadius.circular(99),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: AppColors.primary),
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                    child: const Text(
+                      'Xem tất cả',
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.6,
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-        SizedBox(
-          height: 200,
-          child: ListView.separated(
+          SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: dishes.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
-            itemBuilder: (context, i) => _RelatedCard(dish: dishes[i]),
+            child: SizedBox(
+              height: 236,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (var i = 0; i < dishes.length; i++) ...[
+                    _RelatedCard(dish: dishes[i]),
+                    if (i != dishes.length - 1) const SizedBox(width: 12),
+                  ],
+                ],
+              ),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -1920,6 +2089,7 @@ class _RelatedCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final imageUrl = ImageHelper.url(dish.image);
     return Material(
       color: AppColors.surface,
       borderRadius: BorderRadius.circular(14),
@@ -1930,6 +2100,7 @@ class _RelatedCard extends StatelessWidget {
             context.push(AppRoutes.dishDetailPath(dish.id)),
         child: SizedBox(
           width: 150,
+          height: 224,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1938,14 +2109,14 @@ class _RelatedCard extends StatelessWidget {
                 borderRadius:
                     const BorderRadius.vertical(top: Radius.circular(14)),
                 child: SizedBox(
-                  height: 110,
+                  height: 100,
                   width: 150,
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      dish.image != null && dish.image!.isNotEmpty
+                      imageUrl != null
                           ? Image.network(
-                              ImageHelper.url(dish.image) ?? '',
+                              imageUrl,
                               fit: BoxFit.cover,
                               errorBuilder: (_, __, ___) =>
                                   const ColoredBox(color: AppColors.primarySoft),
@@ -1980,43 +2151,48 @@ class _RelatedCard extends StatelessWidget {
                 ),
               ),
               // Content
-              Padding(
-                padding: const EdgeInsets.all(8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      dish.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    if (dish.description != null)
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 8, 8, 9),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        dish.description!,
-                        maxLines: 2,
+                        dish.name,
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          color: AppColors.textMuted,
-                          fontSize: 10,
-                          height: 1.3,
+                          color: AppColors.textPrimary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w900,
+                          height: 1.15,
                         ),
                       ),
-                    const Spacer(),
-                    Text(
-                      _formatPrice(dish.currentPrice),
-                      style: const TextStyle(
-                        color: AppColors.primaryStrong,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w900,
+                      const SizedBox(height: 2),
+                      if (dish.description != null &&
+                          dish.description!.isNotEmpty)
+                        Text(
+                          dish.description!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 10,
+                            height: 1.2,
+                          ),
+                        ),
+                      const Spacer(),
+                      Text(
+                        _formatPrice(dish.currentPrice),
+                        style: const TextStyle(
+                          color: AppColors.primaryStrong,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w900,
+                          height: 1.1,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ],

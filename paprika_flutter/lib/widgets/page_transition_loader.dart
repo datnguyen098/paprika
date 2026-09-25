@@ -315,32 +315,9 @@ class _PageTransitionLoaderState extends State<PageTransitionLoader>
           // Orbit ring (xoay 360°)
           RotationTransition(
             turns: _orbitCtrl,
-            child: Container(
-              width: 93.84, // 86.4 + 0.42rem * 2 ≈ 86.4 + 6.72 ≈ 93.12
-              height: 93.84,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                // Vẽ border-top đỏ + border-right vàng (gradient) bằng
-                // cách stack 2 vòng tròn với custom border.
-                border: Border(
-                  top: BorderSide(
-                    color: const Color(0xFFD51F1F), // #d51f1f
-                    width: 2,
-                  ),
-                  right: BorderSide(
-                    color: const Color(0xFFF59E0B).withValues(alpha: 0.7),
-                    width: 2,
-                  ),
-                  bottom: BorderSide(
-                    color: Colors.transparent,
-                    width: 2,
-                  ),
-                  left: BorderSide(
-                    color: Colors.transparent,
-                    width: 2,
-                  ),
-                ),
-              ),
+            child: CustomPaint(
+              size: const Size(93.84, 93.84),
+              painter: const _OrbitRingPainter(),
             ),
           ),
           // Logo circle trắng
@@ -573,4 +550,32 @@ extension PageLoaderNavigation on BuildContext {
   void showPageLoader({String? message}) {
     PageLoaderController.instance.showForNavigation(this, message: message);
   }
+}
+
+class _OrbitRingPainter extends CustomPainter {
+  const _OrbitRingPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final strokeWidth = 2.0;
+    final inset = strokeWidth / 2;
+    final arcRect = rect.deflate(inset);
+    final redPaint = Paint()
+      ..color = const Color(0xFFD51F1F)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round;
+    final goldPaint = Paint()
+      ..color = const Color(0xB3F59E0B)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawArc(arcRect, -1.55, 1.2, false, redPaint);
+    canvas.drawArc(arcRect, -0.25, 0.95, false, goldPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _OrbitRingPainter oldDelegate) => false;
 }

@@ -8,6 +8,8 @@ import '../core/constants/app_constants.dart';
 import '../core/config/locales.dart';
 import '../core/i18n/locale_controller.dart';
 import '../l10n/generated/app_localizations.dart';
+import '../providers/providers.dart';
+import 'cart_drawer.dart';
 import 'coming_soon.dart';
 import 'page_transition_loader.dart';
 
@@ -26,8 +28,8 @@ import 'page_transition_loader.dart';
 /// để header "sticky" tự nhiên — Flutter không có CSS `position: sticky`,
 /// nên widget KHÔNG tự xử lý sticky; parent screen quyết định layout.
 ///
-/// Hiện tại [cartItemsCount] là `int` truyền vào (hardcode 0 trong base).
-/// Team FE/BE sẽ thay bằng `ref.watch(cartCountProvider)` sau khi có cart repo.
+/// [cartItemsCount] chỉ còn là fallback cho preview/test; trong app thật badge
+/// đọc từ `cartCountProvider`.
 class PaprikaHeader extends ConsumerStatefulWidget {
   const PaprikaHeader({
     super.key,
@@ -76,6 +78,8 @@ class _PaprikaHeaderState extends ConsumerState<PaprikaHeader> {
         route == AppRoutes.branches ||
         route == AppRoutes.contact ||
         route == AppRoutes.menu ||
+        route == AppRoutes.cart ||
+        route == AppRoutes.checkout ||
         route == AppRoutes.reservation) {
       context.showPageLoader();
       context.go(route);
@@ -362,7 +366,8 @@ class _PaprikaHeaderState extends ConsumerState<PaprikaHeader> {
 
   Widget _buildCartIcon(BuildContext context, {bool showBooking = true}) {
     final l = AppLocalizations.of(context);
-    final count = widget.cartItemsCount;
+    final watchedCount = ref.watch(cartCountProvider);
+    final count = watchedCount > 0 ? watchedCount : widget.cartItemsCount;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -384,7 +389,7 @@ class _PaprikaHeaderState extends ConsumerState<PaprikaHeader> {
               icon: Icons.shopping_bag_outlined,
               backgroundColor: AppColors.accent,
               borderColor: Colors.transparent,
-              onTap: () => ComingSoon.show(context, feature: l.featureCart),
+              onTap: () => showCartDrawer(context),
             ),
             if (count > 0)
               Positioned(
@@ -502,15 +507,20 @@ class _HeaderCircleAction extends StatelessWidget {
     final isCompact = width < 380;
     return Tooltip(
       message: tooltip,
-      child: Material(
-        color: backgroundColor,
-        shape: CircleBorder(side: BorderSide(color: borderColor)),
-        child: InkWell(
-          customBorder: const CircleBorder(),
-          onTap: onTap,
-          child: SizedBox(
-            width: isTiny ? 34 : (isCompact ? 38 : 42),
-            height: isTiny ? 34 : (isCompact ? 38 : 42),
+      child: Container(
+        width: isTiny ? 34 : (isCompact ? 38 : 42),
+        height: isTiny ? 34 : (isCompact ? 38 : 42),
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          shape: BoxShape.circle,
+          border: Border.all(color: borderColor),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          shape: const CircleBorder(),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: onTap,
             child: Center(
               child: Icon(
                 icon,

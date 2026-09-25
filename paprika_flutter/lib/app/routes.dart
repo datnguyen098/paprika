@@ -5,10 +5,13 @@ import '../screens/about_screen.dart';
 import '../screens/allergen_settings_screen.dart';
 import '../screens/branch_detail_screen.dart';
 import '../screens/branches_screen.dart';
+import '../screens/cart_screen.dart';
+import '../screens/checkout_screen.dart';
 import '../screens/contact_screen.dart';
 import '../screens/dish_detail_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/menu_screen.dart';
+import '../screens/order_success_screen.dart';
 import '../screens/reservation_screen.dart';
 
 /// Dia nghĩa tat ca route name & path cua app.
@@ -24,7 +27,7 @@ class AppRoutes {
   static const String search = '/search';
   static const String cart = '/cart';
   static const String checkout = '/checkout';
-  static const String orderSuccess = '/order/success';
+  static const String orderSuccess = '/order/success/:code';
   static const String orders = '/orders';
   static const String orderDetail = '/orders/:id';
   static const String orderTracking = '/orders/:id/track';
@@ -45,6 +48,7 @@ class AppRoutes {
 
   // ==================== Helper builders ====================
   static String dishDetailPath(int id) => '/dish/$id';
+  static String orderSuccessPath(String code) => '/order/success/$code';
   static String orderDetailPath(int id) => '/orders/$id';
   static String orderTrackingPath(int id) => '/orders/$id/track';
   static String branchDetailPath(int id) => '/branches/$id';
@@ -89,6 +93,25 @@ class AppRouter {
             return const _ErrorScreen(error: 'ID món không hợp lệ');
           }
           return DishDetailScreen(dishId: id);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.cart,
+        builder: (context, state) => const CartScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.checkout,
+        builder: (context, state) => const CheckoutScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.orderSuccess,
+        builder: (context, state) {
+          final code = state.pathParameters['code'] ?? '';
+          return OrderSuccessScreen(
+            code: code,
+            invoiceNumber: state.uri.queryParameters['invoice'],
+            total: int.tryParse(state.uri.queryParameters['total'] ?? ''),
+          );
         },
       ),
       // Reservation — đặt bàn, có form + quick actions

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../app/routes.dart';
 import '../core/constants/app_colors.dart';
 import '../l10n/generated/app_localizations.dart';
+import '../providers/providers.dart';
 import 'coming_soon.dart';
 import 'page_transition_loader.dart';
 
@@ -53,6 +54,7 @@ class BottomNavBar extends ConsumerWidget {
     return _BottomNavBarView(
       items: _buildItems(AppLocalizations.of(context)),
       currentRoute: current,
+      cartCount: ref.watch(cartCountProvider),
       onTap: (route) => _go(context, route),
     );
   }
@@ -62,6 +64,7 @@ class BottomNavBar extends ConsumerWidget {
     if (route == AppRoutes.home ||
         route == AppRoutes.splash ||
         route == AppRoutes.menu ||
+        route == AppRoutes.cart ||
         route == AppRoutes.reservation) {
       context.showPageLoader();
       context.go(route);
@@ -92,11 +95,13 @@ class _BottomNavBarView extends StatelessWidget {
   const _BottomNavBarView({
     required this.items,
     required this.currentRoute,
+    required this.cartCount,
     required this.onTap,
   });
 
   final List<_BottomNavItem> items;
   final String currentRoute;
+  final int cartCount;
   final void Function(String route) onTap;
 
   @override
@@ -130,6 +135,7 @@ class _BottomNavBarView extends StatelessWidget {
                 child: _NavTab(
                   item: item,
                   isActive: _isActive(currentRoute, item.route),
+                  count: item.route == AppRoutes.cart ? cartCount : 0,
                   onTap: () => onTap(item.route),
                 ),
               ),
@@ -165,11 +171,13 @@ class _NavTab extends StatelessWidget {
   const _NavTab({
     required this.item,
     required this.isActive,
+    required this.count,
     required this.onTap,
   });
 
   final _BottomNavItem item;
   final bool isActive;
+  final int count;
   final VoidCallback onTap;
 
   @override
@@ -187,10 +195,40 @@ class _NavTab extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              isActive ? item.activeIcon : item.icon,
-              size: 20,
-              color: isActive ? AppColors.gold : const Color(0xFFD6D3D1),
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(
+                  isActive ? item.activeIcon : item.icon,
+                  size: 20,
+                  color: isActive ? AppColors.gold : const Color(0xFFD6D3D1),
+                ),
+                if (count > 0)
+                  Positioned(
+                    top: -7,
+                    right: -10,
+                    child: Container(
+                      constraints:
+                          const BoxConstraints(minWidth: 16, minHeight: 16),
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.accent,
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(color: AppColors.primary, width: 1),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        '$count',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w900,
+                          height: 1,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(height: 4),
             Text(
