@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../core/i18n/locale_controller.dart';
 import '../data/models/about_model.dart';
 import '../data/models/branch_model.dart';
 import '../data/models/category_model.dart';
@@ -67,24 +68,32 @@ final contactRepositoryProvider = Provider<ContactRepository>((ref) {
 // ============================================================
 // DATA PROVIDERS - dùng cho UI
 // ============================================================
+//
+// Mỗi provider có `ref.watch(localeProvider)` để khi user đổi ngôn ngữ qua
+// header switcher, toàn bộ providers tự động invalidate + fetch lại với
+// `Accept-Language` header mới (đã được set ở ApiService interceptor).
 
 /// Load categories - dùng cho menu screen, filter,...
 final categoriesProvider = FutureProvider.autoDispose<List<Category>>((ref) async {
+  ref.watch(localeProvider);
   return ref.watch(categoryRepositoryProvider).getCategories();
 });
 
 /// Món nổi bật - dùng cho home screen
 final featuredDishesProvider = FutureProvider.autoDispose<List<Dish>>((ref) async {
+  ref.watch(localeProvider);
   return ref.watch(dishRepositoryProvider).getFeaturedDishes(limit: 10);
 });
 
 /// Home page data (banners, categories, featured, testimonials, posts, promo).
 final homeProvider = FutureProvider.autoDispose<HomeData>((ref) async {
+  ref.watch(localeProvider);
   return ref.watch(homeRepositoryProvider).getHome();
 });
 
 /// Danh sách tất cả chi nhánh active.
 final branchesProvider = FutureProvider.autoDispose<List<Branch>>((ref) async {
+  ref.watch(localeProvider);
   return ref.watch(branchRepositoryProvider).getBranches();
 });
 
@@ -93,11 +102,13 @@ final branchesProvider = FutureProvider.autoDispose<List<Branch>>((ref) async {
 /// nhiều lần cùng id, BE chỉ gọi 1 lần.
 final branchDetailProvider =
     FutureProvider.autoDispose.family<Branch, int>((ref, id) async {
+  ref.watch(localeProvider);
   return ref.watch(branchRepositoryProvider).getBranch(id);
 });
 
 /// Trang Giới thiệu (about).
 final aboutProvider = FutureProvider.autoDispose<AboutData>((ref) async {
+  ref.watch(localeProvider);
   return ref.watch(aboutRepositoryProvider).getAbout();
 });
 
@@ -179,6 +190,7 @@ class MenuFilter {
 /// Load menu theo filter - dùng cho menu screen
 final menuProvider = FutureProvider.autoDispose
     .family<PagedResponse<Dish>, MenuFilter>((ref, filter) async {
+  ref.watch(localeProvider);
   return ref.watch(dishRepositoryProvider).getMenu(
         categoryId: filter.categoryId,
         categorySlug: filter.categorySlug,
@@ -192,6 +204,7 @@ final menuProvider = FutureProvider.autoDispose
 /// Search results
 final searchDishesProvider =
     FutureProvider.autoDispose.family<List<Dish>, String>((ref, keyword) async {
+  ref.watch(localeProvider);
   if (keyword.trim().length < 2) return [];
   return ref.watch(dishRepositoryProvider).searchDishes(keyword);
 });
@@ -199,6 +212,7 @@ final searchDishesProvider =
 /// Chi tiết món
 final dishDetailProvider =
     FutureProvider.autoDispose.family<DishDetail, int>((ref, id) async {
+  ref.watch(localeProvider);
   return ref.watch(dishRepositoryProvider).getDishDetail(id);
 });
 
@@ -212,8 +226,14 @@ final dishDetailProvider =
 final selectedBranchIdProvider = StateProvider<int?>((ref) => null);
 
 /// Locale hiện tại (vi/en/el). Dùng cho language switcher.
-/// Khi user đổi locale, set vào storage và invalidate homeProvider
-/// để fetch lại data đúng ngôn ngữ.
+///
+/// Đã được tách sang `lib/core/i18n/locale_controller.dart` để mirror
+/// cấu trúc Laravel (SetLocale middleware + LocaleController.dart tương ứng).
+/// Khi user đổi locale, state update → toàn app rebuild + Accept-Language
+/// header của next API request update theo locale mới.
+///
+/// Sử dụng:
+///   `import '../core/i18n/locale_controller.dart' show localeProvider;`
 final currentLocaleProvider = StateProvider<String>((ref) {
   return ref.watch(storageServiceProvider).getLocale() ?? 'vi';
 });

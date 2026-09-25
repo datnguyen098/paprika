@@ -21,6 +21,11 @@ return Application::configure(basePath: dirname(__DIR__))
             SetTimezone::class,
         ]);
 
+        $middleware->appendToGroup('api', [
+            SetLocale::class,
+            SetTimezone::class,
+        ]);
+
         // Enable CORS for API + static images (paprika/*)
         $middleware->prepend(\Illuminate\Http\Middleware\HandleCors::class);
 

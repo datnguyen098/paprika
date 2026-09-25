@@ -7,9 +7,11 @@ import '../core/constants/app_colors.dart';
 import '../core/constants/app_constants.dart';
 import '../data/models/category_model.dart';
 import '../data/models/dish_model.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../providers/providers.dart';
 import '../widgets/bottom_nav_bar.dart';
 import '../widgets/paprika_header.dart';
+import '../widgets/page_transition_loader.dart';
 
 /// MenuScreen — Trang thực đơn, lấy dữ liệu từ API.
 ///
@@ -174,65 +176,84 @@ class _MenuBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.all(AppConstants.spaceMd),
-      padding: const EdgeInsets.all(AppConstants.spaceLg),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [AppColors.primary, AppColors.primaryStrong],
-        ),
-        borderRadius: BorderRadius.circular(AppConstants.radius),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.3),
-            blurRadius: 14,
-            offset: const Offset(0, 4),
-          ),
-        ],
+      constraints: const BoxConstraints(minHeight: 172),
+      padding: const EdgeInsets.fromLTRB(24, 30, 24, 26),
+      decoration: const BoxDecoration(
+        color: AppColors.primaryStrong,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.accent.withValues(alpha: 0.25),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.restaurant_menu,
-                  color: Colors.white,
-                  size: 22,
+          Positioned(
+            right: -42,
+            top: -54,
+            child: Container(
+              width: 180,
+              height: 180,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: AppColors.gold.withValues(alpha: 0.08),
+                  width: 18,
                 ),
               ),
-              const SizedBox(width: 10),
-              const Expanded(
-                child: Text(
-                  'Thực đơn Paprika',
+            ),
+          ),
+          Positioned(
+            left: -60,
+            bottom: -80,
+            child: Container(
+              width: 150,
+              height: 150,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.accent.withValues(alpha: 0.12),
+              ),
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.accent,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Text(
+                  'PAPRIKA',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 22,
+                    fontSize: 9,
                     fontWeight: FontWeight.w900,
-                    letterSpacing: -0.3,
+                    letterSpacing: 1.2,
                   ),
                 ),
               ),
+              const SizedBox(height: 10),
+              Text(
+                l.menuTitle.toUpperCase(),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 32,
+                  height: 1.02,
+                  fontWeight: FontWeight.w900,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                l.menuSubtitle,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.8),
+                  fontSize: 13,
+                  height: 1.55,
+                ),
+              ),
             ],
-          ),
-          const SizedBox(height: 10),
-          Text(
-            'Phở ninh chậm, nem nướng trui than, gyros pita chuẩn vị Athens — '
-            'chọn món bạn yêu thích.',
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.85),
-              fontSize: 13,
-              height: 1.5,
-            ),
           ),
         ],
       ),
@@ -255,6 +276,7 @@ class _CategoryChipsBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context);
     final categoriesAsync = ref.watch(categoriesProvider);
 
     return categoriesAsync.when(
@@ -272,27 +294,44 @@ class _CategoryChipsBar extends ConsumerWidget {
         height: 44,
         child: Center(
           child: Text(
-            'Lỗi tải danh mục',
-            style: TextStyle(
+            l.categoryLoadError,
+            style: const TextStyle(
               color: AppColors.textMuted,
               fontSize: 12,
             ),
           ),
         ),
       ),
-      data: (categories) => _buildChipsList(categories),
+      data: (categories) => _buildChipsList(categories, l),
     );
   }
 
-  Widget _buildChipsList(List<Category> categories) {
-    return SizedBox(
-      height: 44,
+  Widget _buildChipsList(List<Category> categories, AppLocalizations l) {
+    return Container(
+      height: 66,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: const Border(
+          bottom: BorderSide(color: Color(0xFFE7E5E4), width: 1),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      alignment: Alignment.center,
       child: ListView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: AppConstants.spaceMd),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppConstants.spaceMd,
+          vertical: 12,
+        ),
         children: [
           _Chip(
-            label: 'Tất cả',
+            label: l.menuCategoryAll,
             isSelected: selectedId == null,
             onTap: () => onSelect(null),
           ),
@@ -332,9 +371,10 @@ class _Chip extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         onTap: onTap,
         child: Container(
+          height: 40,
           padding: const EdgeInsets.symmetric(
             horizontal: AppConstants.spaceMd,
-            vertical: 10,
+            vertical: 0,
           ),
           alignment: Alignment.center,
           decoration: BoxDecoration(
@@ -351,7 +391,15 @@ class _Chip extends StatelessWidget {
               fontSize: 12,
               fontWeight: FontWeight.w800,
               letterSpacing: 0.1,
+              height: 1.2,
             ),
+            strutStyle: const StrutStyle(
+              fontSize: 12,
+              height: 1.2,
+              forceStrutHeight: true,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ),
@@ -446,6 +494,7 @@ class _SearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppConstants.spaceMd,
@@ -454,9 +503,10 @@ class _SearchBar extends StatelessWidget {
         0,
       ),
       child: Container(
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(AppConstants.radius),
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(color: const Color(0xFFE7E5E4)),
           boxShadow: [
             BoxShadow(
@@ -466,48 +516,75 @@ class _SearchBar extends StatelessWidget {
             ),
           ],
         ),
-        child: TextField(
-          controller: controller,
-          onChanged: onChanged,
-          textInputAction: TextInputAction.search,
-          style: const TextStyle(
-            fontSize: 14,
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.w600,
-          ),
-          decoration: InputDecoration(
-            hintText: 'Tìm món...',
-            hintStyle: const TextStyle(
-              color: AppColors.textMuted,
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l.menuSearchHint.toUpperCase(),
+              style: const TextStyle(
+                color: Color(0xFFA8A29E),
+                fontSize: 10,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.2,
+              ),
             ),
-            prefixIcon: const Icon(
-              Icons.search,
-              size: 20,
-              color: AppColors.textMuted,
+            const SizedBox(height: 8),
+            TextField(
+              controller: controller,
+              onChanged: onChanged,
+              textInputAction: TextInputAction.search,
+              style: const TextStyle(
+                fontSize: 14,
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w600,
+              ),
+              decoration: InputDecoration(
+                hintText: l.menuSearchHint,
+                hintStyle: const TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+                prefixIcon: const Icon(
+                  Icons.search,
+                  size: 18,
+                  color: AppColors.textMuted,
+                ),
+                suffixIcon: ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: controller,
+                  builder: (context, value, _) {
+                    if (value.text.isEmpty) return const SizedBox.shrink();
+                    return IconButton(
+                      onPressed: onClear,
+                      icon: const Icon(
+                        Icons.close,
+                        size: 18,
+                        color: AppColors.textMuted,
+                      ),
+                      tooltip: l.searchClearTooltip,
+                    );
+                  },
+                ),
+                filled: true,
+                fillColor: const Color(0xFFFAFAF9),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: Color(0xFFE7E5E4)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: Color(0xFFE7E5E4)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide:
+                      const BorderSide(color: AppColors.primary, width: 1.5),
+                ),
+              ),
             ),
-            suffixIcon: ValueListenableBuilder<TextEditingValue>(
-              valueListenable: controller,
-              builder: (context, value, _) {
-                if (value.text.isEmpty) return const SizedBox.shrink();
-                return IconButton(
-                  onPressed: onClear,
-                  icon: const Icon(
-                    Icons.close,
-                    size: 18,
-                    color: AppColors.textMuted,
-                  ),
-                  tooltip: 'Xoá',
-                );
-              },
-            ),
-            border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 12,
-            ),
-          ),
+          ],
         ),
       ),
     );
@@ -542,13 +619,14 @@ class _DishCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final hasDiscount = dish.hasDiscount;
     final finalPrice = dish.currentPrice;
 
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(AppConstants.radius),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFF5F5F4)),
         boxShadow: [
           BoxShadow(
@@ -561,19 +639,22 @@ class _DishCard extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(AppConstants.radius),
-          onTap: () => context.push(AppRoutes.dishDetailPath(dish.id)),
+          borderRadius: BorderRadius.circular(16),
+          onTap: () {
+            context.showPageLoader();
+            context.push(AppRoutes.dishDetailPath(dish.id));
+          },
           child: Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
                 // Ảnh trên
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
                   child: SizedBox(
-                    height: 140,
+                    height: 160,
                     width: double.infinity,
                     child: Stack(
                       fit: StackFit.expand,
@@ -602,12 +683,12 @@ class _DishCard extends StatelessWidget {
                                 vertical: 3,
                               ),
                               decoration: BoxDecoration(
-                                color: AppColors.primaryStrong,
-                                borderRadius: BorderRadius.circular(999),
+                                color: AppColors.primary,
+                                borderRadius: BorderRadius.circular(4),
                               ),
-                              child: const Text(
-                                'NỔI BẬT',
-                                style: TextStyle(
+                              child: Text(
+                                l.bestSellerBadge,
+                                style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 9,
                                   fontWeight: FontWeight.w900,
@@ -621,9 +702,9 @@ class _DishCard extends StatelessWidget {
                             child: Container(
                               color: Colors.black.withValues(alpha: 0.45),
                               alignment: Alignment.center,
-                              child: const Text(
-                                'HẾT MÓN',
-                                style: TextStyle(
+                              child: Text(
+                                l.dishSoldOut,
+                                style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 12,
                                   fontWeight: FontWeight.w900,
@@ -637,18 +718,34 @@ class _DishCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
+                if (dish.category?.name.isNotEmpty == true) ...[
+                  Text(
+                    dish.category!.name.toUpperCase(),
+                    style: const TextStyle(
+                      color: AppColors.accent,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.8,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 6),
+                ],
                 // Tên món
                 Text(
-                  dish.name,
+                  dish.name.toUpperCase(),
                   style: const TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 14,
                     fontWeight: FontWeight.w900,
+                    fontStyle: FontStyle.italic,
+                    height: 1.18,
                   ),
-                  maxLines: 1,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
                 // Mô tả
                 Text(
                   dish.description ?? '',
@@ -662,6 +759,8 @@ class _DishCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 // Giá + nút +
+                Container(height: 1, color: const Color(0xFFF5F5F4)),
+                const SizedBox(height: 12),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.end,
@@ -685,7 +784,7 @@ class _DishCard extends StatelessWidget {
                           Text(
                             _formatPrice(finalPrice),
                             style: const TextStyle(
-                              color: AppColors.primaryStrong,
+                              color: AppColors.primary,
                               fontSize: 18,
                               fontWeight: FontWeight.w900,
                             ),
@@ -694,13 +793,16 @@ class _DishCard extends StatelessWidget {
                       ),
                     ),
                     InkWell(
-                      onTap: () => context.push(AppRoutes.dishDetailPath(dish.id)),
+                      onTap: () {
+                        context.showPageLoader();
+                        context.push(AppRoutes.dishDetailPath(dish.id));
+                      },
                       borderRadius: BorderRadius.circular(999),
                       child: Container(
-                        width: 36,
-                        height: 36,
+                        width: 34,
+                        height: 34,
                         decoration: const BoxDecoration(
-                          color: AppColors.primaryStrong,
+                          color: AppColors.primary,
                           shape: BoxShape.circle,
                         ),
                         alignment: Alignment.center,
@@ -762,6 +864,7 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(
         vertical: 60,
@@ -776,8 +879,8 @@ class _EmptyState extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            'Chưa có món nào trong danh mục này',
-            style: TextStyle(
+            l.menuEmpty,
+            style: const TextStyle(
               color: AppColors.textMuted,
               fontSize: 13,
               fontWeight: FontWeight.w700,
@@ -798,6 +901,7 @@ class _ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(
         vertical: 60,
@@ -812,8 +916,8 @@ class _ErrorState extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            'Không tải được thực đơn',
-            style: TextStyle(
+            l.menuErrorTitle,
+            style: const TextStyle(
               color: AppColors.textPrimary,
               fontSize: 14,
               fontWeight: FontWeight.w800,
@@ -822,7 +926,7 @@ class _ErrorState extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             message,
-            style: TextStyle(
+            style: const TextStyle(
               color: AppColors.textMuted,
               fontSize: 11,
             ),
@@ -834,7 +938,7 @@ class _ErrorState extends StatelessWidget {
           ElevatedButton.icon(
             onPressed: onRetry,
             icon: const Icon(Icons.refresh, size: 16),
-            label: const Text('Thử lại'),
+            label: Text(l.commonRetry),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
@@ -880,6 +984,7 @@ class _PaginationBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     if (lastPage <= 1) return const SizedBox.shrink();
 
     final pageList = _buildPageList();
@@ -918,7 +1023,7 @@ class _PaginationBar extends StatelessWidget {
               icon: Icons.chevron_left,
               enabled: hasPrev,
               onTap: () => onPageChanged(currentPage - 1),
-              tooltip: 'Trang trước',
+              tooltip: l.paginationPrev,
             ),
             const SizedBox(width: 4),
             // Các trang
@@ -929,7 +1034,7 @@ class _PaginationBar extends StatelessWidget {
               icon: Icons.chevron_right,
               enabled: hasNext,
               onTap: () => onPageChanged(currentPage + 1),
-              tooltip: 'Trang sau',
+              tooltip: l.paginationNext,
             ),
           ],
         ),

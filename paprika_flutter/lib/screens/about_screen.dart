@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/constants/app_colors.dart';
 import '../core/constants/app_constants.dart';
 import '../data/models/about_model.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../providers/providers.dart';
 import '../widgets/bottom_nav_bar.dart';
 import '../widgets/paprika_footer.dart';
@@ -121,15 +122,15 @@ class _HeroSection extends StatelessWidget {
               color: AppColors.accent.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(20),
             ),
-            child: const Row(
+            child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.local_fire_department,
+                const Icon(Icons.local_fire_department,
                     size: 14, color: AppColors.gold),
-                SizedBox(width: 4),
+                const SizedBox(width: 4),
                 Text(
-                  'VỀ PAPRIKA',
-                  style: TextStyle(
+                  AppLocalizations.of(context).aboutPageBadge,
+                  style: const TextStyle(
                     color: AppColors.gold,
                     fontSize: 10,
                     fontWeight: FontWeight.w900,
@@ -192,14 +193,14 @@ class _ContentSection extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            Row(
               children: [
-                Icon(Icons.auto_stories_outlined,
+                const Icon(Icons.auto_stories_outlined,
                     size: 18, color: AppColors.accent),
-                SizedBox(width: 8),
+                const SizedBox(width: 8),
                 Text(
-                  'Câu Chuyện Của Chúng Tôi',
-                  style: TextStyle(
+                  AppLocalizations.of(context).aboutPageBodyTitle,
+                  style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w900,
                     color: AppColors.primaryStrong,
@@ -236,23 +237,23 @@ class _CtaSection extends StatelessWidget {
           ),
           borderRadius: BorderRadius.circular(AppConstants.radius),
         ),
-        child: const Column(
+        child: Column(
           children: [
             Text(
-              'Đã Sẵn Sàng\nKhai Phá Vị Giác?',
+              AppLocalizations.of(context).aboutCtaTitle,
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 color: Colors.white,
                 fontSize: 22,
                 fontWeight: FontWeight.w900,
                 height: 1.2,
               ),
             ),
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
             Text(
-              'Đặt món trực tuyến để nhận ưu đãi giao hàng, hoặc đặt bàn trực tiếp tại không gian ấm cúng mang phong cách Việt - Hy Lạp của chúng tôi ngay hôm nay!',
+              AppLocalizations.of(context).aboutCtaBody,
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white60, fontSize: 12, height: 1.6),
+              style: const TextStyle(color: Colors.white60, fontSize: 12, height: 1.6),
             ),
           ],
         ),
@@ -316,9 +317,9 @@ class _ErrorContent extends StatelessWidget {
             const Icon(Icons.error_outline,
                 size: 56, color: AppColors.accentStrong),
             const SizedBox(height: 16),
-            const Text(
-              'Không tải được trang Giới thiệu',
-              style: TextStyle(
+            Text(
+              AppLocalizations.of(context).aboutErrorTitle,
+              style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w900,
                 color: AppColors.textPrimary,
@@ -340,7 +341,7 @@ class _ErrorContent extends StatelessWidget {
             ElevatedButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh, size: 16),
-              label: const Text('Thử lại'),
+              label: Text(AppLocalizations.of(context).aboutRetry),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.accentStrong,
                 foregroundColor: Colors.white,

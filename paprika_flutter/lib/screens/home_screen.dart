@@ -6,12 +6,16 @@ import '../app/routes.dart';
 import '../core/constants/app_colors.dart';
 import '../core/constants/app_constants.dart';
 import '../core/utils/image_helper.dart';
+import '../data/models/branch_model.dart';
+import '../data/models/dish_model.dart';
 import '../data/models/home_model.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../providers/providers.dart';
 import '../widgets/bottom_nav_bar.dart';
 import '../widgets/coming_soon.dart';
 import '../widgets/paprika_footer.dart';
 import '../widgets/paprika_header.dart';
+import '../widgets/page_transition_loader.dart';
 
 /// Home screen — Landing page nhà hàng Paprika Patras (giống
 /// `resources/views/storefront/home.blade.php` bên Laravel).
@@ -55,30 +59,25 @@ class HomeScreen extends ConsumerWidget {
                   const SizedBox(height: AppConstants.spaceLg),
                   const _PromotionsSection(), // promo cards (NEW)
                   const SizedBox(height: AppConstants.spaceLg),
-                  const _SectionTitle(
-                    eyebrow: 'Khám phá',
-                    text: 'Món nổi bật',
+                  _BestSellersSection(
+                    eyebrow: AppLocalizations.of(context).sectionDiscover,
+                    title: AppLocalizations.of(context).sectionBestSellers,
                   ),
-                  const SizedBox(height: AppConstants.spaceMd),
-                  const _BestSellersSection(), // featured.take(3), 1 cột
                   const SizedBox(height: AppConstants.spaceLg),
                   const _GallerySection(), // 3 ảnh không gian (NEW)
                   const SizedBox(height: AppConstants.spaceLg),
                   const _ServicesSection(), // 3 cards (NEW)
                   const SizedBox(height: AppConstants.spaceLg),
-                  const _SectionTitle(
-                    eyebrow: 'Đánh giá',
-                    text: 'Khách hàng nói gì',
-                  ),
-                  const SizedBox(height: AppConstants.spaceMd),
-                  const _TestimonialsSection(), // từ homeProvider
+                  const _BranchMapSection(),
                   const SizedBox(height: AppConstants.spaceLg),
-                  const _SectionTitle(
-                    eyebrow: 'Về chúng tôi',
-                    text: 'Paprika Patras',
+                  _TestimonialsSection(
+                    title: AppLocalizations.of(context).sectionTestimonials,
                   ),
-                  const SizedBox(height: AppConstants.spaceMd),
-                  const _AboutCard(), // static
+                  const SizedBox(height: AppConstants.spaceLg),
+                  _AboutCard(
+                    eyebrow: AppLocalizations.of(context).sectionAbout,
+                    title: AppLocalizations.of(context).aboutCardBrand,
+                  ),
                   const SizedBox(height: AppConstants.spaceLg),
                   const PaprikaFooter(),
                 ],
@@ -173,13 +172,15 @@ class _HeroSection extends ConsumerWidget {
       orElse: () => null,
     );
 
+    final l = AppLocalizations.of(context);
+
     // Title và subtitle cho Hero (khớp PHP)
     final title = banner?.title.isNotEmpty == true
         ? banner!.title
-        : 'Paprika - Ẩm thực Việt Nam';
+        : l.heroTitleFallback;
     final subtitle = banner?.subtitle.isNotEmpty == true
         ? banner!.subtitle
-        : 'Phở, bánh mì, nem và các món nướng tại Patras';
+        : l.heroSubtitleFallback;
 
     return Container(
       width: double.infinity,
@@ -226,14 +227,14 @@ class _HeroSection extends ConsumerWidget {
                 color: AppColors.accent,
                 borderRadius: BorderRadius.circular(999),
               ),
-              child: const Row(
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _PulsingDot(),
-                  SizedBox(width: 8),
+                  const _PulsingDot(),
+                  const SizedBox(width: 8),
                   Text(
-                    'Đặt món online',
-                    style: TextStyle(
+                    l.heroBadge,
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 10,
                       fontWeight: FontWeight.w900,
@@ -295,25 +296,28 @@ class _HeroSection extends ConsumerWidget {
                 shadowColor: const Color(0xFF7F1D1D).withValues(alpha: 0.4), // shadow-red-900/30
                 child: InkWell(
                   borderRadius: BorderRadius.circular(999),
-                  onTap: () => context.push(AppRoutes.menu),
+                  onTap: () {
+                    context.showPageLoader();
+                    context.push(AppRoutes.menu);
+                  },
                   child: Container(
                     height: 52, // py-4
                     padding: const EdgeInsets.symmetric(horizontal: 32), // px-8
                     alignment: Alignment.center,
-                    child: const Row(
+                    child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          'Đặt món ngay',
-                          style: TextStyle(
+                          l.heroCta,
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 14,
                             fontWeight: FontWeight.w900,
                             letterSpacing: 1.5,
                           ),
                         ),
-                        SizedBox(width: 8),
-                        Icon(
+                        const SizedBox(width: 8),
+                        const Icon(
                           Icons.arrow_forward,
                           color: Colors.white,
                           size: 18,
@@ -337,19 +341,28 @@ class _HeroSection extends ConsumerWidget {
                   ),
                 ),
               ),
-              child: const Row(
+              child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Expanded(
-                    child: _Stat(value: '100%', label: 'Tươi ngon'),
+                    child: _Stat(
+                      value: l.statFreshValue,
+                      label: l.statFreshLabel,
+                    ),
                   ),
-                  SizedBox(width: 12),
+                  const SizedBox(width: 12),
                   Expanded(
-                    child: _Stat(value: 'Nhanh', label: 'Tự nhận'),
+                    child: _Stat(
+                      value: l.statFastValue,
+                      label: l.statFastLabel,
+                    ),
                   ),
-                  SizedBox(width: 12),
+                  const SizedBox(width: 12),
                   Expanded(
-                    child: _Stat(value: 'Dễ', label: 'Thanh toán'),
+                    child: _Stat(
+                      value: l.statEasyValue,
+                      label: l.statEasyLabel,
+                    ),
                   ),
                 ],
               ),
@@ -461,7 +474,10 @@ class _PrimaryCta extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppConstants.radiusSm),
         onTap: route == null
             ? null
-            : () => context.push(route!),
+            : () {
+                context.showPageLoader();
+                context.push(route!);
+              },
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 14),
           alignment: Alignment.center,
@@ -509,7 +525,10 @@ class _SecondaryCta extends StatelessWidget {
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(AppConstants.radiusSm),
-        onTap: () => context.push(route ?? AppRoutes.reservation),
+        onTap: () {
+          context.showPageLoader();
+          context.push(route ?? AppRoutes.reservation);
+        },
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 14),
           alignment: Alignment.center,
@@ -548,6 +567,7 @@ class _PromotionsSection extends ConsumerWidget {
     return homeAsync.when(
       data: (home) {
         if (home.promotions.isEmpty) return const SizedBox.shrink();
+        final l = AppLocalizations.of(context);
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -558,9 +578,9 @@ class _PromotionsSection extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'ƯU ĐÃI ĐẶC BIỆT',
-                    style: TextStyle(
+                  Text(
+                    l.sectionPromotions.toUpperCase(),
+                    style: const TextStyle(
                       color: AppColors.accent,
                       fontSize: 10,
                       fontWeight: FontWeight.w900,
@@ -568,9 +588,9 @@ class _PromotionsSection extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  const Text(
-                    'Món ngon đang được yêu thích',
-                    style: TextStyle(
+                  Text(
+                    l.sectionPromotionsTitle,
+                    style: const TextStyle(
                       color: AppColors.primaryStrong,
                       fontSize: 22,
                       fontWeight: FontWeight.w900,
@@ -696,9 +716,9 @@ class _PromotionCard extends StatelessWidget {
                         color: AppColors.gold,
                         borderRadius: BorderRadius.circular(999),
                       ),
-                      child: const Text(
-                        'ƯU ĐÃI MỚI NHẤT',
-                        style: TextStyle(
+                      child: Text(
+                        AppLocalizations.of(context).promotionsBadgeFallback,
+                        style: const TextStyle(
                           color: AppColors.primaryStrong,
                           fontSize: 10,
                           fontWeight: FontWeight.w900,
@@ -777,77 +797,134 @@ class _PromotionCard extends StatelessWidget {
 // BEST SELLERS — featured.take(3), 1 cột banner dọc (giống Laravel bestsellers)
 // ===========================================================================
 class _BestSellersSection extends ConsumerWidget {
-  const _BestSellersSection();
+  const _BestSellersSection({required this.eyebrow, required this.title});
+  final String eyebrow;
+  final String title;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final homeAsync = ref.watch(homeProvider);
+    final featuredFallbackAsync = ref.watch(featuredDishesProvider);
+    final l = AppLocalizations.of(context);
 
     return homeAsync.when(
       data: (home) {
-        if (home.featured.isEmpty) return const SizedBox.shrink();
-        final bestSellers = home.featured.take(3).toList();
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Title (giống Laravel "best seller" eyebrow + title)
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: AppConstants.spaceMd),
-              child: Column(
-                children: [
-                  const Text(
-                    'BEST SELLER',
-                    style: TextStyle(
-                      color: AppColors.accent,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.5,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Món nổi bật',
-                    style: TextStyle(
-                      color: AppColors.primaryStrong,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Những món ăn được yêu thích nhất tại Paprika Patras',
-                    style: TextStyle(
-                      color: AppColors.textMuted.withValues(alpha: 0.85),
-                      fontSize: 12,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: AppConstants.spaceMd),
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: AppConstants.spaceMd),
-              child: Column(
-                children: [
-                  for (final dish in bestSellers) ...[
-                    _BestSellerCard(dish: dish),
-                    const SizedBox(height: 12),
-                  ],
-                ],
-              ),
-            ),
-          ],
+        if (home.featured.isNotEmpty) {
+          return _buildContent(home.featured.take(3).toList(), l);
+        }
+        return featuredFallbackAsync.when(
+          data: (dishes) {
+            final bestSellers = dishes
+                .take(3)
+                .map(_featuredDishFromDish)
+                .toList(growable: false);
+            if (bestSellers.isEmpty) return const SizedBox.shrink();
+            return _buildContent(bestSellers, l);
+          },
+          loading: () => const SizedBox(
+            height: 120,
+            child: Center(child: CircularProgressIndicator()),
+          ),
+          error: (_, __) => const SizedBox.shrink(),
         );
       },
       loading: () => const SizedBox(
         height: 120,
         child: Center(child: CircularProgressIndicator()),
       ),
+      error: (_, __) => _buildFallbackContent(featuredFallbackAsync, l),
+    );
+  }
+
+  Widget _buildFallbackContent(
+    AsyncValue<List<Dish>> featuredFallbackAsync,
+    AppLocalizations l,
+  ) {
+    return featuredFallbackAsync.when(
+      data: (dishes) {
+        final bestSellers = dishes
+            .take(3)
+            .map(_featuredDishFromDish)
+            .toList(growable: false);
+        if (bestSellers.isEmpty) return const SizedBox.shrink();
+        return _buildContent(bestSellers, l);
+      },
+      loading: () => const SizedBox(
+        height: 120,
+        child: Center(child: CircularProgressIndicator()),
+      ),
       error: (_, __) => const SizedBox.shrink(),
+    );
+  }
+
+  Widget _buildContent(
+    List<HomeFeaturedDish> bestSellers,
+    AppLocalizations l,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Title (giống Laravel "best seller" eyebrow + title)
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppConstants.spaceMd),
+          child: Column(
+            children: [
+              Text(
+                eyebrow.toUpperCase(),
+                style: const TextStyle(
+                  color: AppColors.accent,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.5,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                title,
+                style: const TextStyle(
+                  color: AppColors.primaryStrong,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                l.sectionBestSellersSubtitle,
+                style: TextStyle(
+                  color: AppColors.textMuted.withValues(alpha: 0.85),
+                  fontSize: 12,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppConstants.spaceMd),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppConstants.spaceMd),
+          child: Column(
+            children: [
+              for (final dish in bestSellers) ...[
+                _BestSellerCard(dish: dish),
+                const SizedBox(height: 12),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  HomeFeaturedDish _featuredDishFromDish(Dish dish) {
+    return HomeFeaturedDish(
+      id: dish.id,
+      name: dish.name,
+      image: dish.image ?? '',
+      price: dish.currentPrice,
+      oldPrice: dish.hasDiscount ? dish.price : null,
+      rating: null,
+      isNew: false,
     );
   }
 }
@@ -872,7 +949,10 @@ class _BestSellerCard extends StatelessWidget {
       shadowColor: Colors.black.withValues(alpha: 0.06),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () => context.push(AppRoutes.dishDetailPath(dish.id)),
+        onTap: () {
+          context.showPageLoader();
+          context.push(AppRoutes.dishDetailPath(dish.id));
+        },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -949,9 +1029,9 @@ class _BestSellerCard extends StatelessWidget {
                               color: AppColors.accent,
                               borderRadius: BorderRadius.circular(999),
                             ),
-                            child: const Text(
-                              'MỚI',
-                              style: TextStyle(
+                            child: Text(
+                              AppLocalizations.of(context).dishTagNew,
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w900,
@@ -1067,7 +1147,9 @@ class _GallerySection extends ConsumerWidget {
 
     return homeAsync.when(
       data: (home) {
-        if (home.galleryImages.isEmpty) return const SizedBox.shrink();
+        final images = home.galleryImages.isNotEmpty
+            ? home.galleryImages.take(3).toList()
+            : _fallbackGalleryImages(AppLocalizations.of(context));
         return Container(
           margin: const EdgeInsets.symmetric(
               horizontal: AppConstants.spaceMd),
@@ -1087,14 +1169,14 @@ class _GallerySection extends ConsumerWidget {
                   color: AppColors.accent,
                   borderRadius: BorderRadius.circular(999),
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _PulsingDot(),
-                    SizedBox(width: 6),
+                    const _PulsingDot(),
+                    const SizedBox(width: 6),
                     Text(
-                      'KHÔNG GIAN',
-                      style: TextStyle(
+                      AppLocalizations.of(context).galleryBadge,
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 10,
                         fontWeight: FontWeight.w900,
@@ -1105,9 +1187,9 @@ class _GallerySection extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 10),
-              const Text(
-                'Bên trong\nPaprika Patras',
-                style: TextStyle(
+              Text(
+                AppLocalizations.of(context).sectionGallery,
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 26,
                   fontWeight: FontWeight.w900,
@@ -1117,8 +1199,7 @@ class _GallerySection extends ConsumerWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'Không gian ấm cúng, bếp mở & phòng VIP cho nhóm — '
-                'một chút Việt Nam giữa lòng Patras.',
+                AppLocalizations.of(context).sectionGallerySubtitle,
                 style: TextStyle(
                   color: Colors.white.withValues(alpha: 0.75),
                   fontSize: 13,
@@ -1127,10 +1208,10 @@ class _GallerySection extends ConsumerWidget {
               ),
               const SizedBox(height: AppConstants.spaceMd),
               // 3 ảnh xếp dọc, ảnh giữa thụt xuống (giống Laravel sm:mt-8)
-              for (int i = 0; i < home.galleryImages.length; i++) ...[
+              for (int i = 0; i < images.length; i++) ...[
                 if (i == 1) const SizedBox(height: 16),
-                _GalleryTile(image: home.galleryImages[i], offsetDown: i == 1),
-                if (i < home.galleryImages.length - 1)
+                _GalleryTile(image: images[i], offsetDown: i == 1),
+                if (i < images.length - 1)
                   const SizedBox(height: 10),
               ],
               const SizedBox(height: AppConstants.spaceMd),
@@ -1144,23 +1225,23 @@ class _GallerySection extends ConsumerWidget {
                       // TODO: navigate /gallery khi có route
                       debugPrint('🟢 Gallery tap → /gallery');
                     },
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
                           horizontal: 18, vertical: 10),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            'XEM THÊM ẢNH',
-                            style: TextStyle(
+                            AppLocalizations.of(context).promotionsViewMore,
+                            style: const TextStyle(
                               color: AppColors.primaryStrong,
                               fontSize: 12,
                               fontWeight: FontWeight.w900,
                               letterSpacing: 1.0,
                             ),
                           ),
-                          SizedBox(width: 6),
-                          Icon(Icons.arrow_forward,
+                          const SizedBox(width: 6),
+                          const Icon(Icons.arrow_forward,
                               size: 14, color: AppColors.primaryStrong),
                         ],
                       ),
@@ -1176,6 +1257,32 @@ class _GallerySection extends ConsumerWidget {
       error: (_, __) => const SizedBox.shrink(),
     );
   }
+
+  List<HomeGalleryImage> _fallbackGalleryImages(AppLocalizations l) {
+    return [
+      HomeGalleryImage(
+        id: -1,
+        title: l.sectionGallery,
+        altText: l.sectionGallery,
+        image: 'paprika/gallery/space-1.jpg',
+        branchName: 'Paprika Patras',
+      ),
+      HomeGalleryImage(
+        id: -2,
+        title: l.galleryBadge,
+        altText: l.galleryBadge,
+        image: 'paprika/gallery/space-2.jpg',
+        branchName: 'Paprika Patras',
+      ),
+      HomeGalleryImage(
+        id: -3,
+        title: l.sectionGallerySubtitle,
+        altText: l.sectionGallerySubtitle,
+        image: 'paprika/gallery/space-3.jpg',
+        branchName: 'Paprika Patras',
+      ),
+    ];
+  }
 }
 
 class _GalleryTile extends StatelessWidget {
@@ -1185,8 +1292,7 @@ class _GalleryTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imageUrl =
-        image.image.isNotEmpty ? ImageHelper.url(image.image) : null;
+    final imageUrl = ImageHelper.url(image.image);
 
     return Material(
       borderRadius: BorderRadius.circular(AppConstants.radius),
@@ -1279,6 +1385,7 @@ class _ServicesSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1287,9 +1394,9 @@ class _ServicesSection extends ConsumerWidget {
               const EdgeInsets.symmetric(horizontal: AppConstants.spaceMd),
           child: Column(
             children: [
-              const Text(
-                'DỊCH VỤ',
-                style: TextStyle(
+              Text(
+                l.sectionServices.toUpperCase(),
+                style: const TextStyle(
                   color: AppColors.accent,
                   fontSize: 10,
                   fontWeight: FontWeight.w900,
@@ -1297,9 +1404,9 @@ class _ServicesSection extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 4),
-              const Text(
-                'Chọn cách thưởng thức',
-                style: TextStyle(
+              Text(
+                l.sectionServicesTitle,
+                style: const TextStyle(
                   color: AppColors.primaryStrong,
                   fontSize: 22,
                   fontWeight: FontWeight.w900,
@@ -1308,7 +1415,7 @@ class _ServicesSection extends ConsumerWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                'Ba cách thưởng thức món ăn yêu thích của bạn',
+                l.sectionServicesSubtitle,
                 style: TextStyle(
                   color: AppColors.textMuted.withValues(alpha: 0.85),
                   fontSize: 12,
@@ -1325,10 +1432,9 @@ class _ServicesSection extends ConsumerWidget {
           child: Column(
             children: [
               _ServiceCard(
-                title: 'Giao hàng',
-                subtitle:
-                    'Đặt online, giao tận nơi trong 30 phút tại Patras.',
-                ctaLabel: 'Đặt hàng ngay',
+                title: l.serviceDeliveryTitle,
+                subtitle: l.serviceDeliverySubtitle,
+                ctaLabel: l.serviceDeliveryCta,
                 route: AppRoutes.menu,
                 icon: Icons.local_shipping,
                 gradientColors: const [AppColors.primary, AppColors.primaryStrong],
@@ -1336,9 +1442,9 @@ class _ServicesSection extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
               _ServiceCard(
-                title: 'Nhận tại quán',
-                subtitle: 'Đặt trước, đến lấy nhanh không phải xếp hàng.',
-                ctaLabel: 'Đặt hàng ngay',
+                title: l.servicePickupTitle,
+                subtitle: l.servicePickupSubtitle,
+                ctaLabel: l.servicePickupCta,
                 route: AppRoutes.menu,
                 icon: Icons.shopping_bag,
                 gradientColors: const [AppColors.accent, AppColors.accentStrong],
@@ -1346,9 +1452,9 @@ class _ServicesSection extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
               _ServiceCard(
-                title: 'Tại quán',
-                subtitle: 'Đặt bàn trước để có chỗ ngồi đẹp nhất.',
-                ctaLabel: 'Đặt bàn ngay',
+                title: l.serviceDineInTitle,
+                subtitle: l.serviceDineInSubtitle,
+                ctaLabel: l.serviceDineInCta,
                 route: AppRoutes.reservation,
                 icon: Icons.event_seat,
                 gradientColors: const [AppColors.brownDeep, AppColors.brownDark],
@@ -1387,7 +1493,10 @@ class _ServiceCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(AppConstants.radiusLg),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () => context.push(route),
+        onTap: () {
+          context.showPageLoader();
+          context.push(route);
+        },
         child: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -1464,35 +1573,504 @@ class _ServiceCard extends StatelessWidget {
 }
 
 // ===========================================================================
+// BRANCH MAP SECTION — mirrors Laravel storefront.partials.branch-map
+// ===========================================================================
+class _BranchMapSection extends ConsumerWidget {
+  const _BranchMapSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final branchesAsync = ref.watch(branchesProvider);
+
+    return branchesAsync.when(
+      data: (branches) {
+        if (branches.isEmpty) return const SizedBox.shrink();
+        return _BranchMapCard(branch: branches.first);
+      },
+      loading: () => const Padding(
+        padding: EdgeInsets.symmetric(horizontal: AppConstants.spaceMd),
+        child: SizedBox(
+          height: 220,
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      ),
+      error: (_, __) => const SizedBox.shrink(),
+    );
+  }
+}
+
+class _BranchMapCard extends StatelessWidget {
+  const _BranchMapCard({required this.branch});
+
+  final Branch branch;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = _BranchMapText.of(context);
+    final phone = branch.displayHotline;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: AppConstants.spaceMd),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE7E5E4)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(AppConstants.spaceMd),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.location_on,
+                        size: 14,
+                        color: AppColors.accent,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        text.eyebrow,
+                        style: const TextStyle(
+                          color: AppColors.primary,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.3,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  text.title,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                    fontStyle: FontStyle.italic,
+                    height: 1.08,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  text.description,
+                  style: const TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 13,
+                    height: 1.55,
+                  ),
+                ),
+                const SizedBox(height: AppConstants.spaceMd),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(AppConstants.spaceMd),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFAFAF9),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        branch.name.isNotEmpty ? branch.name : text.defaultName,
+                        style: const TextStyle(
+                          color: AppColors.primary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      if (branch.address.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        _BranchInfoRow(
+                          icon: Icons.location_on_outlined,
+                          text: branch.address,
+                        ),
+                      ],
+                      if (phone.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        _BranchInfoRow(
+                          icon: Icons.phone_outlined,
+                          text: phone,
+                          strong: true,
+                        ),
+                      ],
+                      if ((branch.openingHours ?? '').isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        _BranchInfoRow(
+                          icon: Icons.access_time,
+                          text: branch.openingHours!,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppConstants.spaceMd),
+                Row(
+                  children: [
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: () {
+                          context.showPageLoader();
+                          context.push(AppRoutes.branchDetailPath(branch.id));
+                        },
+                        icon: const Icon(Icons.arrow_forward, size: 16),
+                        label: Text(text.directions),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size.fromHeight(44),
+                          textStyle: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.9,
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (phone.isNotEmpty) ...[
+                      const SizedBox(width: 10),
+                      OutlinedButton(
+                        onPressed: () => ComingSoon.show(
+                          context,
+                          feature: text.callStore,
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.primary,
+                          side: const BorderSide(color: Color(0xFFE7E5E4)),
+                          minimumSize: const Size(104, 44),
+                          textStyle: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.9,
+                          ),
+                        ),
+                        child: Text(text.callStore),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Container(
+            height: 224,
+            decoration: const BoxDecoration(
+              color: Color(0xFFE7E5E4),
+              border: Border(top: BorderSide(color: Color(0xFFE7E5E4))),
+            ),
+            child: _BranchMapPreview(branch: branch),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BranchInfoRow extends StatelessWidget {
+  const _BranchInfoRow({
+    required this.icon,
+    required this.text,
+    this.strong = false,
+  });
+
+  final IconData icon;
+  final String text;
+  final bool strong;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 15, color: AppColors.accent),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 12,
+              height: 1.4,
+              fontWeight: strong ? FontWeight.w800 : FontWeight.w500,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _BranchMapPreview extends StatelessWidget {
+  const _BranchMapPreview({required this.branch});
+
+  final Branch branch;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasMap = (branch.mapEmbedSrc ?? '').isNotEmpty ||
+        (branch.latitude != null && branch.longitude != null);
+    final text = _BranchMapText.of(context);
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        DecoratedBox(
+          decoration: BoxDecoration(
+            color: const Color(0xFFDDE9EF),
+            backgroundBlendMode: BlendMode.multiply,
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                const Color(0xFFBFE3EC).withValues(alpha: 0.9),
+                const Color(0xFFF3EFE6).withValues(alpha: 0.95),
+              ],
+            ),
+          ),
+        ),
+        CustomPaint(painter: _MapGridPainter()),
+        Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: AppColors.accent,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.accent.withValues(alpha: 0.25),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.location_on,
+                  color: Colors.white,
+                  size: 30,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.92),
+                  borderRadius: BorderRadius.circular(999),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.08),
+                      blurRadius: 10,
+                    ),
+                  ],
+                ),
+                child: Text(
+                  hasMap ? branch.name : text.mapUnavailable,
+                  style: const TextStyle(
+                    color: AppColors.primary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Positioned(
+          left: 12,
+          right: 12,
+          bottom: 12,
+          child: FilledButton.icon(
+            onPressed: () {
+              context.showPageLoader();
+              context.push(AppRoutes.branchDetailPath(branch.id));
+            },
+            icon: const Icon(Icons.map_outlined, size: 16),
+            label: Text(text.openMap),
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: AppColors.primary,
+              minimumSize: const Size.fromHeight(40),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MapGridPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final roadPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.82)
+      ..strokeWidth = 7
+      ..strokeCap = StrokeCap.round;
+    final thinRoadPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.65)
+      ..strokeWidth = 3
+      ..strokeCap = StrokeCap.round;
+    final waterPaint = Paint()
+      ..color = const Color(0xFF8FD0DA).withValues(alpha: 0.7)
+      ..style = PaintingStyle.fill;
+
+    final waterPath = Path()
+      ..moveTo(0, 0)
+      ..lineTo(size.width * 0.34, 0)
+      ..quadraticBezierTo(size.width * 0.24, size.height * 0.38,
+          size.width * 0.34, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+    canvas.drawPath(waterPath, waterPaint);
+
+    for (var x = size.width * 0.44; x < size.width; x += 46) {
+      canvas.drawLine(Offset(x, -20), Offset(x - 90, size.height + 20),
+          thinRoadPaint);
+    }
+    for (var y = 22.0; y < size.height; y += 42) {
+      canvas.drawLine(Offset(size.width * 0.22, y), Offset(size.width, y + 16),
+          thinRoadPaint);
+    }
+    canvas.drawLine(
+      Offset(size.width * 0.18, size.height * 0.85),
+      Offset(size.width * 0.92, size.height * 0.08),
+      roadPaint,
+    );
+    canvas.drawLine(
+      Offset(size.width * 0.38, -10),
+      Offset(size.width * 0.78, size.height + 20),
+      roadPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _BranchMapText {
+  const _BranchMapText({
+    required this.eyebrow,
+    required this.title,
+    required this.description,
+    required this.defaultName,
+    required this.directions,
+    required this.callStore,
+    required this.openMap,
+    required this.mapUnavailable,
+  });
+
+  final String eyebrow;
+  final String title;
+  final String description;
+  final String defaultName;
+  final String directions;
+  final String callStore;
+  final String openMap;
+  final String mapUnavailable;
+
+  static _BranchMapText of(BuildContext context) {
+    switch (Localizations.localeOf(context).languageCode) {
+      case 'en':
+        return const _BranchMapText(
+          eyebrow: 'Paprika Patras',
+          title: 'Visit Us In Patras',
+          description:
+              'Visit our restaurant, explore your favourite dishes and come by for Vietnamese food, Greek drinks and bookings.',
+          defaultName: 'Paprika Patras',
+          directions: 'Directions',
+          callStore: 'Call Store',
+          openMap: 'Open map',
+          mapUnavailable: 'Map unavailable',
+        );
+      case 'el':
+        return const _BranchMapText(
+          eyebrow: 'Paprika Patras',
+          title: 'Επισκεφθείτε μας στην Πάτρα',
+          description:
+              'Δείτε την τοποθεσία, καλέστε ή ελάτε από κοντά για βιετναμέζικο φαγητό, ελληνικά ποτά και κρατήσεις.',
+          defaultName: 'Paprika Patras',
+          directions: 'Οδηγίες',
+          callStore: 'Καλέστε',
+          openMap: 'Άνοιγμα χάρτη',
+          mapUnavailable: 'Ο χάρτης δεν είναι διαθέσιμος',
+        );
+      default:
+        return const _BranchMapText(
+          eyebrow: 'Paprika Patras',
+          title: 'Ghé Thăm Paprika Tại Patras',
+          description:
+              'Xem địa chỉ quán, gọi nhanh hoặc ghé thưởng thức món Việt, đồ uống Hy Lạp và đặt bàn.',
+          defaultName: 'Paprika Patras',
+          directions: 'Chỉ đường',
+          callStore: 'Gọi quán',
+          openMap: 'Mở bản đồ',
+          mapUnavailable: 'Bản đồ không khả dụng',
+        );
+    }
+  }
+}
+
+// ===========================================================================
 // TESTIMONIALS SECTION — horizontal scroll (giữ nguyên)
 // ===========================================================================
 class _TestimonialsSection extends ConsumerWidget {
-  const _TestimonialsSection();
+  const _TestimonialsSection({required this.title});
+  final String title;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final homeAsync = ref.watch(homeProvider);
 
-    return homeAsync.when(
-      data: (home) {
-        if (home.testimonials.isEmpty) return const SizedBox.shrink();
-        return SizedBox(
-          height: 130,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(
-                horizontal: AppConstants.spaceMd),
-            itemCount: home.testimonials.length,
-            separatorBuilder: (_, __) =>
-                const SizedBox(width: AppConstants.spaceSm),
-            itemBuilder: (_, i) {
-              return _TestimonialCard(testimonial: home.testimonials[i]);
-            },
-          ),
-        );
-      },
-      loading: () => const SizedBox(height: 130),
-      error: (_, __) => const SizedBox.shrink(),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _SectionTitle(text: title),
+        const SizedBox(height: AppConstants.spaceMd),
+        homeAsync.when(
+          data: (home) {
+            if (home.testimonials.isEmpty) return const SizedBox.shrink();
+            return SizedBox(
+              height: 130,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppConstants.spaceMd),
+                itemCount: home.testimonials.length,
+                separatorBuilder: (_, __) =>
+                    const SizedBox(width: AppConstants.spaceSm),
+                itemBuilder: (_, i) {
+                  return _TestimonialCard(testimonial: home.testimonials[i]);
+                },
+              ),
+            );
+          },
+          loading: () => const SizedBox(height: 130),
+          error: (_, __) => const SizedBox.shrink(),
+        ),
+      ],
     );
   }
 }
@@ -1584,12 +2162,18 @@ class _TestimonialCard extends StatelessWidget {
 // ABOUT CARD — static brand card
 // ===========================================================================
 class _AboutCard extends ConsumerWidget {
-  const _AboutCard();
+  const _AboutCard({required this.eyebrow, required this.title});
+  final String eyebrow;
+  final String title;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context);
     return GestureDetector(
-      onTap: () => context.push(AppRoutes.about),
+      onTap: () {
+        context.showPageLoader();
+        context.push(AppRoutes.about);
+      },
       child: Container(
         width: double.infinity,
         margin:
@@ -1615,24 +2199,24 @@ class _AboutCard extends ConsumerWidget {
                       color: Colors.white, size: 22),
                 ),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        'PAPRIKA PATRAS',
-                        style: TextStyle(
+                        l.aboutCardBrand,
+                        style: const TextStyle(
                           color: AppColors.primaryStrong,
                           fontSize: 16,
                           fontWeight: FontWeight.w900,
                           letterSpacing: 0.04,
                         ),
                       ),
-                      SizedBox(height: 2),
+                      const SizedBox(height: 2),
                       Text(
-                        'Vietnamese & Greek Restaurant · Patras, GR',
-                        style: TextStyle(
+                        l.aboutCardTagline,
+                        style: const TextStyle(
                           color: AppColors.textMuted,
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -1644,12 +2228,9 @@ class _AboutCard extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: AppConstants.spaceMd),
-            const Text(
-              'Mở cửa từ năm 2019, Paprika Patras mang đến thực đơn '
-              'fusion độc đáo giữa hai nền ẩm thực: phở, bún chả, bánh mì '
-              'Việt Nam kết hợp gyros, moussaka, souvlaki Hy Lạp. '
-              'Tất cả nguyên liệu nhập tươi hàng tuần, nấu thủ công mỗi ngày.',
-              style: TextStyle(
+            Text(
+              l.aboutCardBody,
+              style: const TextStyle(
                 color: AppColors.textPrimary,
                 fontSize: 13,
                 height: 1.6,
@@ -1659,10 +2240,10 @@ class _AboutCard extends ConsumerWidget {
             Wrap(
               spacing: AppConstants.spaceSm,
               runSpacing: AppConstants.spaceSm,
-              children: const [
-                _Pill(icon: Icons.schedule, label: 'Mở cửa 11:30 - 23:00'),
-                _Pill(icon: Icons.location_on, label: 'Patras, Greece'),
-                _Pill(icon: Icons.star, label: '4.7 / 5 trên Google'),
+              children: [
+                _Pill(icon: Icons.schedule, label: l.aboutPillHours),
+                _Pill(icon: Icons.location_on, label: l.aboutPillLocation),
+                _Pill(icon: Icons.star, label: l.aboutPillRating),
               ],
             ),
           ],
@@ -1715,6 +2296,7 @@ class _FloatingContactButtons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -1724,8 +2306,8 @@ class _FloatingContactButtons extends StatelessWidget {
           mini: true,
           backgroundColor: AppColors.accent,
           onPressed: () =>
-              ComingSoon.show(context, feature: 'Gọi điện thoại'),
-          tooltip: 'Gọi điện',
+              ComingSoon.show(context, feature: l.fabCallFeature),
+          tooltip: l.fabCallTooltip,
           child: const Icon(Icons.phone, color: Colors.white, size: 22),
         ),
         const SizedBox(height: 12),
@@ -1733,8 +2315,8 @@ class _FloatingContactButtons extends StatelessWidget {
           heroTag: 'fab-chat',
           mini: true,
           backgroundColor: AppColors.primary,
-          onPressed: () => ComingSoon.show(context, feature: 'Chat trực tuyến'),
-          tooltip: 'Chat trực tuyến',
+          onPressed: () => ComingSoon.show(context, feature: l.fabChatFeature),
+          tooltip: l.fabChatTooltip,
           child: const Icon(Icons.chat_bubble, color: Colors.white, size: 20),
         ),
       ],

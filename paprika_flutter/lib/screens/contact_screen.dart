@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/constants/app_colors.dart';
 import '../core/constants/app_constants.dart';
 import '../data/models/contact_model.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../providers/providers.dart';
 import '../services/api_service.dart';
 import '../widgets/bottom_nav_bar.dart';
@@ -108,6 +109,7 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
   }
 
   void _showSuccessDialog() {
+    final l = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -127,19 +129,19 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
                   color: AppColors.successText, size: 40),
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Gửi liên hệ thành công!',
-              style: TextStyle(
+            Text(
+              l.contactSuccessTitle,
+              style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w900,
                 color: AppColors.textPrimary,
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Chúng tôi sẽ phản hồi qua email trong thời gian sớm nhất.',
+            Text(
+              l.contactSuccessBody,
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 13,
                 color: AppColors.textMuted,
               ),
@@ -147,7 +149,7 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Đóng'),
+              child: Text(l.commonClose),
             ),
           ],
         ),
@@ -205,9 +207,9 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
                               ),
                             ),
                             const SizedBox(width: 8),
-                            const Text(
-                              'LIÊN HỆ',
-                              style: TextStyle(
+                            Text(
+                              AppLocalizations.of(context).contactBadge,
+                              style: const TextStyle(
                                 color: AppColors.gold,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w900,
@@ -217,9 +219,9 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
                           ],
                         ),
                         const SizedBox(height: 6),
-                        const Text(
-                          'LIÊN HỆ VỚI CHÚNG TÔI',
-                          style: TextStyle(
+                        Text(
+                          AppLocalizations.of(context).contactTitle,
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 22,
                             fontWeight: FontWeight.w900,
@@ -228,7 +230,7 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Gửi tin nhắn, chúng tôi sẽ phản hồi qua email.',
+                          AppLocalizations.of(context).contactSubtitle,
                           style: TextStyle(
                             color: Colors.white.withValues(alpha: 0.85),
                             fontSize: 13,
@@ -247,14 +249,14 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           _Field(
-                            label: 'Họ tên',
+                            label: AppLocalizations.of(context).contactFieldName,
                             required: true,
                             error: _errorFor('name'),
                             child: TextFormField(
                               controller: _nameCtrl,
-                              decoration: const InputDecoration(
-                                hintText: 'Nguyễn Văn A',
-                                prefixIcon: Icon(Icons.person_outline,
+                              decoration: InputDecoration(
+                                hintText: AppLocalizations.of(context).contactFieldNameHint,
+                                prefixIcon: const Icon(Icons.person_outline,
                                     color: AppColors.primary, size: 20),
                               ),
                               onChanged: (_) =>
@@ -262,7 +264,7 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
                             ),
                           ),
                           _Field(
-                            label: 'Email',
+                            label: AppLocalizations.of(context).contactFieldEmail,
                             required: true,
                             error: _errorFor('email'),
                             child: TextFormField(
@@ -278,14 +280,14 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
                             ),
                           ),
                           _Field(
-                            label: 'Điện thoại',
+                            label: AppLocalizations.of(context).contactFieldPhone,
                             error: _errorFor('phone'),
                             child: TextFormField(
                               controller: _phoneCtrl,
                               keyboardType: TextInputType.phone,
-                              decoration: const InputDecoration(
-                                hintText: '+30 2610 123 456',
-                                prefixIcon: Icon(Icons.phone_outlined,
+                              decoration: InputDecoration(
+                                hintText: AppLocalizations.of(context).contactFieldPhoneHint,
+                                prefixIcon: const Icon(Icons.phone_outlined,
                                     color: AppColors.primary, size: 20),
                               ),
                               onChanged: (_) =>
@@ -293,13 +295,13 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
                             ),
                           ),
                           _Field(
-                            label: 'Tiêu đề',
+                            label: AppLocalizations.of(context).contactFieldSubject,
                             error: _errorFor('subject'),
                             child: TextFormField(
                               controller: _subjectCtrl,
-                              decoration: const InputDecoration(
-                                hintText: 'Tiêu đề tin nhắn (tùy chọn)',
-                                prefixIcon: Icon(Icons.subject,
+                              decoration: InputDecoration(
+                                hintText: AppLocalizations.of(context).contactFieldSubjectHint,
+                                prefixIcon: const Icon(Icons.subject,
                                     color: AppColors.primary, size: 20),
                               ),
                               onChanged: (_) =>
@@ -307,14 +309,14 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
                             ),
                           ),
                           _Field(
-                            label: 'Nội dung',
+                            label: AppLocalizations.of(context).contactFieldMessage,
                             required: true,
                             error: _errorFor('message'),
                             child: TextFormField(
                               controller: _messageCtrl,
                               maxLines: 5,
-                              decoration: const InputDecoration(
-                                hintText: 'Viết nội dung liên hệ của bạn...',
+                              decoration: InputDecoration(
+                                hintText: AppLocalizations.of(context).contactFieldMessageHint,
                                 alignLabelWithHint: true,
                               ),
                               onChanged: (_) => setState(
@@ -339,16 +341,16 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
                                   : const Icon(Icons.send),
                               label: Text(
                                 _isSubmitting
-                                    ? 'Đang gửi...'
-                                    : 'GỬI LIÊN HỆ',
+                                    ? AppLocalizations.of(context).commonSending
+                                    : AppLocalizations.of(context).contactSubmit,
                               ),
                             ),
                           ),
                           const SizedBox(height: AppConstants.spaceSm),
-                          const Center(
+                          Center(
                             child: Text(
-                              'Chúng tôi sẽ phản hồi qua email trong vòng 24 giờ.',
-                              style: TextStyle(
+                              AppLocalizations.of(context).contactReplyHint,
+                              style: const TextStyle(
                                 fontSize: 11,
                                 color: AppColors.textMuted,
                                 fontStyle: FontStyle.italic,
@@ -403,9 +405,9 @@ class _Field extends StatelessWidget {
                 ),
               ),
               if (required)
-                const Text(
-                  ' *',
-                  style: TextStyle(
+                Text(
+                  AppLocalizations.of(context).requiredAsterisk,
+                  style: const TextStyle(
                     color: AppColors.accent,
                     fontSize: 12,
                     fontWeight: FontWeight.w900,

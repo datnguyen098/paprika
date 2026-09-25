@@ -7,10 +7,12 @@ import '../core/constants/app_colors.dart';
 import '../core/constants/app_constants.dart';
 import '../core/utils/image_helper.dart';
 import '../data/models/branch_model.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../providers/providers.dart';
 import '../widgets/bottom_nav_bar.dart';
 import '../widgets/paprika_footer.dart';
 import '../widgets/paprika_header.dart';
+import '../widgets/page_transition_loader.dart';
 
 /// Branches screen — danh sách tất cả chi nhánh.
 ///
@@ -57,9 +59,9 @@ class BranchesScreen extends ConsumerWidget {
                               ),
                             ),
                             const SizedBox(width: 8),
-                            const Text(
-                              'CƠ SỞ',
-                              style: TextStyle(
+                            Text(
+                              AppLocalizations.of(context).branchListBadge,
+                              style: const TextStyle(
                                 color: AppColors.gold,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w900,
@@ -69,9 +71,9 @@ class BranchesScreen extends ConsumerWidget {
                           ],
                         ),
                         const SizedBox(height: 6),
-                        const Text(
-                          'TẤT CẢ CHI NHÁNH',
-                          style: TextStyle(
+                        Text(
+                          AppLocalizations.of(context).branchListTitle,
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 22,
                             fontWeight: FontWeight.w900,
@@ -80,7 +82,7 @@ class BranchesScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Chọn cơ sở gần bạn nhất để đặt bàn hoặc đặt món.',
+                          AppLocalizations.of(context).branchListSubtitle,
                           style: TextStyle(
                             color: Colors.white.withValues(alpha: 0.85),
                             fontSize: 13,
@@ -109,6 +111,7 @@ class BranchesScreen extends ConsumerWidget {
                                   onTap: () {
                                     ref.read(selectedBranchIdProvider.notifier).state =
                                         branch.id;
+                                    context.showPageLoader();
                                     context.go(AppRoutes.branchDetailPath(branch.id));
                                   },
                                 ),
@@ -214,9 +217,9 @@ class _BranchCard extends StatelessWidget {
                             color: AppColors.successBg,
                             borderRadius: BorderRadius.circular(999),
                           ),
-                          child: const Text(
-                            'Đang mở cửa',
-                            style: TextStyle(
+                          child: Text(
+                            AppLocalizations.of(context).branchOpenBadge,
+                            style: const TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w700,
                               color: AppColors.successText,
@@ -243,7 +246,7 @@ class _BranchCard extends StatelessWidget {
                         child: OutlinedButton.icon(
                           onPressed: onTap,
                           icon: const Icon(Icons.info_outline, size: 16),
-                          label: const Text('Chi tiết'),
+                          label: Text(AppLocalizations.of(context).branchButtonDetails),
                         ),
                       ),
                       const SizedBox(width: AppConstants.spaceSm),
@@ -251,7 +254,7 @@ class _BranchCard extends StatelessWidget {
                         child: ElevatedButton.icon(
                           onPressed: () {},
                           icon: const Icon(Icons.phone, size: 16),
-                          label: const Text('Gọi'),
+                          label: Text(AppLocalizations.of(context).branchButtonCall),
                         ),
                       ),
                     ],
@@ -329,9 +332,9 @@ class _ErrorState extends StatelessWidget {
         children: [
           const Icon(Icons.wifi_off, size: 48, color: AppColors.textMuted),
           const SizedBox(height: 12),
-          const Text(
-            'Không tải được danh sách chi nhánh',
-            style: TextStyle(
+          Text(
+            AppLocalizations.of(context).branchErrorTitle,
+            style: const TextStyle(
               fontWeight: FontWeight.w700,
               color: AppColors.textPrimary,
             ),
@@ -346,7 +349,7 @@ class _ErrorState extends StatelessWidget {
           ElevatedButton.icon(
             onPressed: onRetry,
             icon: const Icon(Icons.refresh, size: 16),
-            label: const Text('Thử lại'),
+            label: Text(AppLocalizations.of(context).commonRetry),
           ),
         ],
       ),
@@ -361,13 +364,13 @@ class _EmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(AppConstants.spaceLg),
-      child: const Column(
+      child: Column(
         children: [
-          Icon(Icons.storefront, size: 48, color: AppColors.textMuted),
-          SizedBox(height: 12),
+          const Icon(Icons.storefront, size: 48, color: AppColors.textMuted),
+          const SizedBox(height: 12),
           Text(
-            'Chưa có chi nhánh nào',
-            style: TextStyle(
+            AppLocalizations.of(context).branchEmpty,
+            style: const TextStyle(
               fontWeight: FontWeight.w700,
               color: AppColors.textPrimary,
             ),

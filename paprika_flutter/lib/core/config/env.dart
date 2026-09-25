@@ -9,7 +9,7 @@ import 'package:flutter/foundation.dart';
 /// không phải đổi code mỗi lần đổi giữa emulator ↔ máy thật ↔ web:
 ///
 ///   - Android Emulator  → `http://10.0.2.2:{port}`    (host loopback của emulator)
-///   - Android thiết bị thật → `http://{lanDevIp}:{port}` (cùng Wi-Fi với máy dev)
+///   - Android thiết bị thật → `http://{lanDevHost}:{port}` (cùng Wi-Fi với máy dev)
 ///   - iOS Simulator     → `http://127.0.0.1:{port}`
 ///   - Web (Chrome)      → `http://localhost:{port}`
 ///
@@ -37,9 +37,9 @@ import 'package:flutter/foundation.dart';
 /// mà không throw. Hot reload sẽ chỉ sai URL khi bạn vừa đổi thiết bị
 /// (emulator → máy thật) — bấm **R** (hot restart) để detect lại.
 ///
-/// Lưu ý: fallback sync dùng `lanDevIp` cho Android (mặc định "máy thật"),
-/// vì đó là case phổ biến nhất của dev. Nếu bạn đang ở emulator và hot
-/// reload liên tục, hãy bấm R để re-detect.
+/// Lưu ý: fallback sync dùng `10.0.2.2` cho Android, vì đây là host
+/// ổn định nhất cho emulator khi hot reload reset static state. Nếu chạy
+/// trên điện thoại thật, truyền `--dart-define=API_HOST=<IP máy dev>`.
 class Env {
   Env._();
 
@@ -47,9 +47,12 @@ class Env {
   // Cấu hình tập trung - chỉnh 1 chỗ khi đổi mạng / đổi port
   // ============================================================
 
-  /// IP LAN của máy dev (chạy Laravel).
-  /// Khi chuyển Wi-Fi, chạy `ipconfig` trên máy dev rồi cập nhật chỗ này.
-  static const String lanDevIp = '192.168.1.10';
+  /// Host LAN mặc định của máy dev khi chạy trên thiết bị thật.
+  /// Có thể override bằng `--dart-define=API_HOST=192.168.1.10`.
+  static const String lanDevHost = '192.168.1.10';
+
+  /// Host loopback của Android emulator trỏ về máy dev.
+  static const String androidEmulatorHost = '10.0.2.2';
 
   /// Port Laravel dev (mặc định `php artisan serve` là 8000).
   static const String devPort = '8000';
@@ -63,6 +66,12 @@ class Env {
 
   static const String _overrideWebOrigin =
       String.fromEnvironment('WEB_ORIGIN');
+
+  static const String _overrideApiHost =
+      String.fromEnvironment('API_HOST');
+
+  static const String _overrideApiPort =
+      String.fromEnvironment('API_PORT', defaultValue: devPort);
 
   // ============================================================
   // Runtime state - set bởi init() hoặc _fallbackSync()
@@ -166,8 +175,7 @@ class Env {
       _webOrigin = origin;
       _resolvedBy = 'platform-fallback';
     } else if (Platform.isAndroid) {
-      const host = lanDevIp;
-      const origin = 'http://$host:$devPort';
+      final origin = _originForHost(androidEmulatorHost);
       _apiBaseUrl = '$origin/api/v1';
       _webOrigin = origin;
       _resolvedBy = 'platform-fallback';
@@ -200,8 +208,10 @@ class Env {
     if (Platform.isAndroid) {
       final info = await DeviceInfoPlugin().androidInfo;
       final isEmulator = !info.isPhysicalDevice;
-      final host = isEmulator ? '10.0.2.2' : lanDevIp;
-      final origin = 'http://$host:$devPort';
+      final host = _overrideApiHost.isNotEmpty
+          ? _overrideApiHost
+          : (isEmulator ? androidEmulatorHost : lanDevHost);
+      final origin = _originForHost(host);
       return ('$origin/api/v1', origin);
     }
 
@@ -223,4 +233,6 @@ class Env {
       debugPrint('   webOrigin  = $_webOrigin');
     }
   }
+
+  static String _originForHost(String host) => 'http://$host:$_overrideApiPort';
 }

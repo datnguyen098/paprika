@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../app/routes.dart';
 import '../core/constants/app_colors.dart';
-import '../widgets/coming_soon.dart';
+import '../l10n/generated/app_localizations.dart';
+import 'coming_soon.dart';
+import 'page_transition_loader.dart';
 
 /// Bottom navigation bar 4 tab theo Laravel Blade storefront
 /// (`components.bottom-nav` / `_bottom_nav.blade.php`).
@@ -13,27 +15,28 @@ import '../widgets/coming_soon.dart';
 class BottomNavBar extends ConsumerWidget {
   const BottomNavBar({super.key});
 
-  static const _items = <_BottomNavItem>[
+  /// Build nav items từ AppLocalizations (mirror paprika_header pattern).
+  List<_BottomNavItem> _buildItems(AppLocalizations l) => <_BottomNavItem>[
     _BottomNavItem(
-      label: 'TRANG CHỦ',
+      label: l.bottomNavHome,
       route: AppRoutes.home,
       icon: Icons.home_outlined,
       activeIcon: Icons.home,
     ),
     _BottomNavItem(
-      label: 'THỰC ĐƠN',
+      label: l.bottomNavMenu,
       route: AppRoutes.menu,
       icon: Icons.restaurant_menu_outlined,
       activeIcon: Icons.restaurant_menu,
     ),
     _BottomNavItem(
-      label: 'ĐẶT BÀN',
+      label: l.bottomNavReservation,
       route: AppRoutes.reservation,
       icon: Icons.event_outlined,
       activeIcon: Icons.event_available,
     ),
     _BottomNavItem(
-      label: 'GIỎ HÀNG',
+      label: l.bottomNavCart,
       route: AppRoutes.cart,
       icon: Icons.shopping_bag_outlined,
       activeIcon: Icons.shopping_bag,
@@ -48,7 +51,7 @@ class BottomNavBar extends ConsumerWidget {
         .uri
         .path;
     return _BottomNavBarView(
-      items: _items,
+      items: _buildItems(AppLocalizations.of(context)),
       currentRoute: current,
       onTap: (route) => _go(context, route),
     );
@@ -60,21 +63,23 @@ class BottomNavBar extends ConsumerWidget {
         route == AppRoutes.splash ||
         route == AppRoutes.menu ||
         route == AppRoutes.reservation) {
+      context.showPageLoader();
       context.go(route);
       return;
     }
 
     // Route chưa có screen -> show snackbar "đang phát triển".
-    final feature = _featureFor(route);
+    final l = AppLocalizations.of(context);
+    final feature = _featureFor(route, l);
     ComingSoon.show(context, feature: feature);
   }
 
-  String? _featureFor(String route) {
+  String? _featureFor(String route, AppLocalizations l) {
     switch (route) {
       case AppRoutes.menu:
-        return 'Thực đơn';
+        return l.featureMenu;
       case AppRoutes.cart:
-        return 'Giỏ hàng';
+        return l.featureCart;
       default:
         return null;
     }
@@ -98,21 +103,23 @@ class _BottomNavBarView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.primary,
         border: const Border(
-          top: BorderSide(color: AppColors.border, width: 1),
+          top: BorderSide(color: AppColors.primaryStrong, width: 1),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
+            color: Colors.black.withValues(alpha: 0.18),
+            blurRadius: 12,
+            offset: const Offset(0, -3),
           ),
         ],
       ),
       padding: EdgeInsets.only(
+        left: 8,
+        right: 8,
         top: 6,
-        bottom: MediaQuery.of(context).padding.bottom + 4,
+        bottom: MediaQuery.of(context).padding.bottom + 6,
       ),
       child: SafeArea(
         top: false,
@@ -167,14 +174,14 @@ class _NavTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Tab active có nền vàng (gold) pill bo tròn — khớp PHP design.
     return InkWell(
       onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+        margin: const EdgeInsets.symmetric(horizontal: 2),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
         decoration: BoxDecoration(
-          color: isActive ? AppColors.gold : Colors.transparent,
+          color: isActive ? AppColors.primaryStrong : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
@@ -183,7 +190,7 @@ class _NavTab extends StatelessWidget {
             Icon(
               isActive ? item.activeIcon : item.icon,
               size: 20,
-              color: isActive ? AppColors.primaryStrong : AppColors.textMuted,
+              color: isActive ? AppColors.gold : const Color(0xFFD6D3D1),
             ),
             const SizedBox(height: 4),
             Text(
@@ -191,9 +198,8 @@ class _NavTab extends StatelessWidget {
               style: TextStyle(
                 fontSize: 9,
                 fontWeight: FontWeight.w900,
-                letterSpacing: 0.08,
-                color:
-                    isActive ? AppColors.primaryStrong : AppColors.textMuted,
+                letterSpacing: 0.5,
+                color: isActive ? AppColors.gold : const Color(0xFFD6D3D1),
               ),
               textAlign: TextAlign.center,
             ),

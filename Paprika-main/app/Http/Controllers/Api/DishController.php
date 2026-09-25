@@ -53,7 +53,7 @@ class DishController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = Dish::query()
-            ->with(['category', 'translations'])
+            ->with(['translations', 'category.translations', 'timeSlots.translations'])
             ->active();
 
         // Filter theo category_id
@@ -93,7 +93,7 @@ class DishController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Lấy danh sách món ăn thành công',
-            'data' => $dishes->map(fn ($dish) => $this->transformDishSummary($dish)),
+            'data' => $this->transformDishSummaries($dishes->getCollection()),
             'meta' => [
                 'current_page' => $dishes->currentPage(),
                 'last_page' => $dishes->lastPage(),
@@ -117,7 +117,7 @@ class DishController extends Controller
         $limit = $request->integer('limit', 10);
         
         $dishes = Dish::query()
-            ->with(['category'])
+            ->with(['translations', 'category.translations', 'timeSlots.translations'])
             ->active()
             ->featured()
             ->orderBy('sort_order')
@@ -127,7 +127,7 @@ class DishController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Lấy danh sách món nổi bật thành công',
-            'data' => $dishes->map(fn ($dish) => $this->transformDishSummary($dish)),
+            'data' => $this->transformDishSummaries($dishes),
         ]);
     }
 
@@ -410,7 +410,7 @@ class DishController extends Controller
         }
 
         $dishes = Dish::query()
-            ->with(['category'])
+            ->with(['translations', 'category.translations', 'timeSlots.translations'])
             ->active()
             ->search($keyword)
             ->orderBy('is_featured', 'desc')
@@ -421,8 +421,18 @@ class DishController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Tìm kiếm thành công',
-            'data' => $dishes->map(fn ($dish) => $this->transformDishSummary($dish)),
+            'data' => $this->transformDishSummaries($dishes),
         ]);
+    }
+
+    protected function transformDishSummaries($dishes): array
+    {
+        $branch = active_branch();
+
+        return $dishes
+            ->map(fn ($dish) => $this->transformDishSummary($dish, $branch))
+            ->values()
+            ->all();
     }
 
     /**
@@ -431,21 +441,21 @@ class DishController extends Controller
      * @param Dish $dish
      * @return array
      */
-    protected function transformDishSummary(Dish $dish): array
+    protected function transformDishSummary(Dish $dish, $branch = null): array
     {
-        $branch = active_branch();
         $availability = $branch ? $this->availability->check($dish, $branch) : null;
+        $description = $dish->localized('description');
 
         return [
             'id' => $dish->id,
             'name' => $dish->localized('name'),
             'slug' => $dish->slug,
-            'description' => $dish->localized('description') 
-                ? Str::limit(strip_tags($dish->localized('description')), 100) 
+            'description' => $description
+                ? Str::limit(strip_tags($description), 100)
                 : null,
             'price' => (int) $dish->price,
             'sale_price' => $dish->sale_price ? (int) $dish->sale_price : null,
-                'image' => $this->imageUrl($dish->image),
+            'image' => $this->imageUrl($dish->image),
             'is_featured' => $dish->is_featured,
             'is_available' => $availability?->available ?? true,
             'availability_label' => $availability?->label(),

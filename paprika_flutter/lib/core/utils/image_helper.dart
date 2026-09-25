@@ -52,10 +52,19 @@ class ImageHelper {
   static String? url(String? path) {
     if (path == null || path.isEmpty) return null;
 
-    // Đã là URL đầy đủ (http/https) hoặc data URI (svg inline).
-    if (path.startsWith('http://') ||
-        path.startsWith('https://') ||
-        path.startsWith('data:')) {
+    if (path.startsWith('data:')) {
+      return path;
+    }
+
+    // BE đôi khi trả absolute URL theo host Laravel đang chạy
+    // (127.0.0.1/localhost). Trên Android/emulator, host đó không trỏ về
+    // máy dev, nên normalize về webOrigin đã cấu hình cho Flutter.
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      final uri = Uri.tryParse(path);
+      if (uri != null && (uri.host == '127.0.0.1' || uri.host == 'localhost')) {
+        return '${ApiConstants.webOrigin}${uri.path}'
+            '${uri.hasQuery ? '?${uri.query}' : ''}';
+      }
       return path;
     }
 

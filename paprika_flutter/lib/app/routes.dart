@@ -59,6 +59,9 @@ class AppRouter {
     debugLogDiagnostics: false,
     errorBuilder: (context, state) =>
         _ErrorScreen(error: state.error?.toString()),
+    // Tick `routeChangeNotifier` mỗi lần navigate để
+    // `_RouteLoaderListener` (trong app.dart) show page loader.
+    observers: [_RouteTickObserver()],
     routes: [
       // Trang chu
       GoRoute(
@@ -144,5 +147,37 @@ class _ErrorScreen extends StatelessWidget {
       appBar: AppBar(title: const Text('Loi')),
       body: Center(child: Text(error ?? 'Da co loi xay ra')),
     );
+  }
+}
+
+/// Global notifier — mỗi lần route thay đổi sẽ được `GoRouter`
+/// (qua [_RouteTickObserver]) tick lên 1. `_RouteLoaderListener`
+/// trong `app.dart` lắng nghe notifier này để show page loader.
+final ValueNotifier<int> routeChangeNotifier = ValueNotifier<int>(0);
+
+/// GoRouter [NavigatorObserver] — tick [routeChangeNotifier] khi
+/// route push/replace hoặc pop. Listener ở `app.dart` sẽ show loader.
+class _RouteTickObserver extends NavigatorObserver {
+  void _tick() {
+    // ValueNotifier tự notify listener; bump value để so sánh !=.
+    routeChangeNotifier.value = routeChangeNotifier.value + 1;
+  }
+
+  @override
+  void didPush(Route route, Route? previousRoute) {
+    super.didPush(route, previousRoute);
+    _tick();
+  }
+
+  @override
+  void didReplace({Route? newRoute, Route? oldRoute}) {
+    super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
+    _tick();
+  }
+
+  @override
+  void didPop(Route route, Route? previousRoute) {
+    super.didPop(route, previousRoute);
+    _tick();
   }
 }

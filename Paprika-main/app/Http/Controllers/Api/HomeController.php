@@ -11,7 +11,6 @@ use App\Models\Post;
 use App\Models\Promotion;
 use App\Models\Testimonial;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * GET /api/v1/home
@@ -30,7 +29,7 @@ class HomeController extends Controller
     private const LIMIT_TESTIMONIALS = 4;
     private const LIMIT_POSTS = 3;
     private const LIMIT_PROMOTIONS = 4;
-    private const LIMIT_GALLERY = 6;
+    private const LIMIT_GALLERY = 19;
     private const LIMIT_CATEGORIES = 8;
 
     public function index(): JsonResponse
@@ -59,6 +58,7 @@ class HomeController extends Controller
     private function banners(): array
     {
         return Banner::query()
+            ->with('translations')
             ->active()
             ->orderBy('sort_order')
             ->orderBy('id')
@@ -66,10 +66,10 @@ class HomeController extends Controller
             ->get()
             ->map(fn (Banner $b): array => [
                 'id'        => $b->id,
-                'title'     => $b->title,
-                'subtitle'  => $b->subtitle,
+                'title'     => $b->localized('title'),
+                'subtitle'  => $b->localized('subtitle'),
                 'image'     => media_url($b->image),
-                'cta_label' => $b->button_text,
+                'cta_label' => $b->localized('button_text'),
                 'cta_link'  => $b->button_link,
             ])
             ->all();
@@ -83,6 +83,7 @@ class HomeController extends Controller
     private function categories(): array
     {
         return Category::query()
+            ->with('translations')
             ->dish()
             ->active()
             ->orderBy('sort_order')
@@ -91,7 +92,7 @@ class HomeController extends Controller
             ->get()
             ->map(fn (Category $c): array => [
                 'id'   => $c->id,
-                'name' => $c->name,
+                'name' => $c->localized('name'),
                 // 'icon' trong DB không tồn tại → trả null để FE tự chọn icon mặc định.
                 'icon' => null,
             ])
@@ -100,12 +101,13 @@ class HomeController extends Controller
 
     /**
      * Dishes featured + active. Map field Flutter:
-     * id, name, image, price (decimal), old_price (sale_price),
+     * id, name, image, price (current EUR minor units), old_price (original),
      * rating (DB chưa có → 0), is_new (DB chưa có → false).
      */
     private function featured(): array
     {
         return Dish::query()
+            ->with(['category', 'category.translations'])
             ->featured()
             ->active()
             ->orderBy('sort_order')
@@ -114,12 +116,16 @@ class HomeController extends Controller
             ->get()
             ->map(fn (Dish $d): array => [
                 'id'        => $d->id,
-                'name'      => $d->name,
+                'name'      => $d->localized('name'),
                 'image'     => media_url($d->image),
-                'price'     => (float) $d->price,
-                'old_price' => $d->sale_price !== null ? (float) $d->sale_price : null,
+                'price'     => (int) ($d->sale_price ?: $d->price),
+                'old_price' => $d->sale_price !== null ? (int) $d->price : null,
                 'rating'    => 0.0,
                 'is_new'    => false,
+                'category'  => $d->category ? [
+                    'id'   => $d->category->id,
+                    'name' => $d->category->localized('name'),
+                ] : null,
             ])
             ->all();
     }
@@ -131,6 +137,7 @@ class HomeController extends Controller
     private function testimonials(): array
     {
         return Testimonial::query()
+            ->with('translations')
             ->active()
             ->orderBy('sort_order')
             ->orderBy('id')
@@ -141,7 +148,7 @@ class HomeController extends Controller
                 'name'    => $t->name,
                 'avatar'  => media_url($t->avatar),
                 'rating'  => (int) $t->rating,
-                'content' => $t->content,
+                'content' => $t->localized('content') ?? $t->content,
             ])
             ->all();
     }
@@ -154,14 +161,15 @@ class HomeController extends Controller
     private function latestPosts(): array
     {
         return Post::query()
+            ->with('translations')
             ->published()
             ->orderByDesc('published_at')
             ->limit(self::LIMIT_POSTS)
             ->get()
             ->map(fn (Post $p): array => [
                 'id'         => $p->id,
-                'title'      => $p->title,
-                'excerpt'    => $p->excerpt,
+                'title'      => $p->localized('title'),
+                'excerpt'    => $p->localized('excerpt') ?? $p->excerpt,
                 'image'      => media_url($p->thumbnail),
                 'author'     => null,
                 'created_at' => optional($p->published_at)->toDateString(),
@@ -177,6 +185,7 @@ class HomeController extends Controller
     private function promotions(): array
     {
         return Promotion::query()
+            ->with('translations')
             ->current()
             ->where('placement', 'home')
             ->orderBy('sort_order')
@@ -185,12 +194,12 @@ class HomeController extends Controller
             ->get()
             ->map(fn (Promotion $p): array => [
                 'id'          => $p->id,
-                'badge'       => $p->badge,
-                'title'       => $p->title,
-                'subtitle'    => $p->subtitle,
-                'description' => $p->description,
+                'badge'       => $p->localized('badge'),
+                'title'       => $p->localized('title'),
+                'subtitle'    => $p->localized('subtitle'),
+                'description' => $p->localized('description'),
                 'image'       => media_url($p->image),
-                'cta_label'   => $p->button_text,
+                'cta_label'   => $p->localized('button_text'),
                 'cta_link'    => $p->button_link,
             ])
             ->all();
@@ -206,45 +215,25 @@ class HomeController extends Controller
     private function gallery(): array
     {
         return GalleryImage::query()
+            ->with(['translations', 'branch.translations'])
             ->active()
             ->orderByDesc('is_featured')
             ->orderBy('sort_order')
             ->orderBy('id')
             ->limit(self::LIMIT_GALLERY)
             ->get()
-            ->filter(fn (GalleryImage $g): bool => $this->imageExists($g->image))
             ->map(function (GalleryImage $g): array {
                 $branch = $g->branch;
                 return [
                     'id'       => $g->id,
-                    'title'    => $g->title,
-                    'alt_text' => $g->alt_text,
+                    'title'    => $g->localized('title'),
+                    'alt_text' => $g->localized('alt_text'),
                     'image'    => media_url($g->image),
-                    'branch'   => $branch ? ['name' => $branch->name] : null,
+                    'branch'   => $branch ? ['name' => $branch->localized('name')] : null,
                 ];
             })
             ->values()
             ->all();
-    }
-
-    /**
-     * Kiểm tra file ảnh có tồn tại trên disk không.
-     * Xử lý cả 2 dạng path DB lưu:
-     *   - relative (vd `gallery/x.jpg`) → check storage/app/public/
-     *   - absolute (vd `/paprika/x.jpg`) → check public/
-     */
-    private function imageExists(?string $path): bool
-    {
-        if (blank($path)) {
-            return false;
-        }
-        if (str_starts_with($path, '/')) {
-            return file_exists(public_path(ltrim($path, '/')));
-        }
-        if (str_starts_with($path, 'http')) {
-            return true; // Không check URL bên ngoài, cứ pass qua.
-        }
-        return Storage::disk(config('uploads.disk', 'public'))->exists($path);
     }
 
     /**
@@ -257,6 +246,7 @@ class HomeController extends Controller
     private function promoPopup(): ?array
     {
         $p = Promotion::query()
+            ->with('translations')
             ->current()
             ->where('placement', 'popup')
             ->orderBy('sort_order')
@@ -269,10 +259,10 @@ class HomeController extends Controller
 
         return [
             'enabled'    => true,
-            'title'      => $p->title,
-            'content'    => $p->subtitle ?? $p->description,
+            'title'      => $p->localized('title'),
+            'content'    => $p->localized('subtitle') ?? $p->localized('description'),
             'image'      => media_url($p->image),
-            'cta_label'  => $p->button_text,
+            'cta_label'  => $p->localized('button_text'),
             'cta_link'   => $p->button_link,
             'expires_at' => optional($p->ends_at)?->toIso8601String(),
         ];
