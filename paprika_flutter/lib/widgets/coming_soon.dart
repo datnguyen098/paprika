@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/constants/app_colors.dart';
+import '../l10n/generated/app_localizations.dart';
 
 /// Helper chung để hiển thị "Tính năng đang được phát triển".
 ///
@@ -18,13 +19,14 @@ class ComingSoon {
   static void show(BuildContext context, {String? feature}) {
     final messenger = ScaffoldMessenger.maybeOf(context);
     if (messenger == null) return;
+    final l = AppLocalizations.of(context);
 
     // Clear snackbar cũ (nếu user click nhiều lần liên tiếp).
     messenger.hideCurrentSnackBar();
 
     final label = feature == null
-        ? 'Tính năng này đang được phát triển'
-        : '"$feature" đang được phát triển';
+        ? l.comingSoonDefault
+        : l.comingSoonFeature(feature);
 
     messenger.showSnackBar(
       SnackBar(
@@ -51,7 +53,7 @@ class ComingSoon {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Team FE đang hoàn thiện. Vui lòng quay lại sau.',
+                    l.comingSoonHint,
                     style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.85),
                       fontSize: 11,

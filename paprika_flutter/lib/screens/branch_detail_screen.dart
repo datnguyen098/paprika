@@ -7,10 +7,12 @@ import '../core/constants/app_colors.dart';
 import '../core/constants/app_constants.dart';
 import '../core/utils/image_helper.dart';
 import '../data/models/branch_model.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../providers/providers.dart';
 import '../widgets/bottom_nav_bar.dart';
 import '../widgets/paprika_footer.dart';
 import '../widgets/paprika_header.dart';
+import '../widgets/page_transition_loader.dart';
 
 /// Branch detail screen — chi tiết 1 chi nhánh.
 ///
@@ -70,9 +72,10 @@ class _DetailAppBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final branchAsync = ref.watch(branchDetailProvider(branchId));
+    final l = AppLocalizations.of(context);
     final name = branchAsync.maybeWhen(
       data: (b) => b.name,
-      orElse: () => 'Chi nhánh',
+      orElse: () => l.branchDetailFallbackName,
     );
 
     return Container(
@@ -88,7 +91,10 @@ class _DetailAppBar extends ConsumerWidget {
             children: [
               IconButton(
                 icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: () => context.go(AppRoutes.branches),
+                onPressed: () {
+                  context.showPageLoader();
+                  context.go(AppRoutes.branches);
+                },
               ),
               Expanded(
                 child: Text(
@@ -117,6 +123,7 @@ class _BranchContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final b = branch;
+    final l = AppLocalizations.of(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -209,7 +216,7 @@ class _BranchContent extends StatelessWidget {
                     child: ElevatedButton.icon(
                       onPressed: () {},
                       icon: const Icon(Icons.phone, size: 18),
-                      label: const Text('Gọi ngay'),
+                      label: Text(l.branchDetailCall),
                     ),
                   ),
                   const SizedBox(width: AppConstants.spaceSm),
@@ -217,7 +224,7 @@ class _BranchContent extends StatelessWidget {
                     child: OutlinedButton.icon(
                       onPressed: () {},
                       icon: const Icon(Icons.directions, size: 18),
-                      label: const Text('Chỉ đường'),
+                      label: Text(l.branchDetailDirections),
                     ),
                   ),
                 ],
@@ -227,7 +234,7 @@ class _BranchContent extends StatelessWidget {
 
               // Order modes
               if (_hasOrderModes(b)) ...[
-                _SectionHeader(title: 'Hình thức phục vụ'),
+                _SectionHeader(title: l.branchDetailServiceModes),
                 const SizedBox(height: AppConstants.spaceSm),
                 Wrap(
                   spacing: AppConstants.spaceSm,
@@ -236,19 +243,19 @@ class _BranchContent extends StatelessWidget {
                     if (b.acceptsOnlineOrders == true)
                       _ModeChip(
                         icon: Icons.shopping_bag_outlined,
-                        label: 'Đặt online',
+                        label: l.branchDetailModeOnline,
                         available: true,
                       ),
                     if (b.acceptsPickupOrders == true)
                       _ModeChip(
                         icon: Icons.takeout_dining_outlined,
-                        label: 'Mang đi',
+                        label: l.branchDetailModePickup,
                         available: true,
                       ),
                     if (b.acceptsDeliveryOrders == true)
                       _ModeChip(
                         icon: Icons.delivery_dining_outlined,
-                        label: 'Giao hàng',
+                        label: l.branchDetailModeDelivery,
                         available: true,
                       ),
                   ],
@@ -258,7 +265,7 @@ class _BranchContent extends StatelessWidget {
               // Delivery info
               if (_hasDeliveryInfo(b)) ...[
                 const SizedBox(height: AppConstants.spaceLg),
-                _SectionHeader(title: 'Thông tin giao hàng'),
+                _SectionHeader(title: l.branchDetailDeliveryInfo),
                 const SizedBox(height: AppConstants.spaceSm),
                 Container(
                   padding: const EdgeInsets.all(AppConstants.spaceMd),
@@ -271,23 +278,27 @@ class _BranchContent extends StatelessWidget {
                     children: [
                       if (b.deliveryMinOrderAmount != null)
                         _DeliveryRow(
-                          label: 'Đơn tối thiểu',
+                          label: l.branchDetailMinOrder,
                           value:
                               '€${(b.deliveryMinOrderAmount! / 100).toStringAsFixed(2)}',
                         ),
                       if (b.deliveryFreeOrderAmount != null) ...[
                         const SizedBox(height: 8),
                         _DeliveryRow(
-                          label: 'Miễn phí giao hàng',
-                          value:
-                              'từ €${(b.deliveryFreeOrderAmount! / 100).toStringAsFixed(2)}',
+                          label: l.branchDetailFreeDelivery,
+                          value: l.branchDetailFreeDeliveryFrom(
+                            (b.deliveryFreeOrderAmount! / 100)
+                                .toStringAsFixed(2),
+                          ),
                         ),
                       ],
                       if (b.deliveryMaxDistanceKm != null) ...[
                         const SizedBox(height: 8),
                         _DeliveryRow(
-                          label: 'Bán kính giao hàng',
-                          value: '${b.deliveryMaxDistanceKm} km',
+                          label: l.branchDetailRadius,
+                          value: l.branchDetailRadiusValue(
+                            b.deliveryMaxDistanceKm!.toInt(),
+                          ),
                         ),
                       ],
                     ],
@@ -298,7 +309,7 @@ class _BranchContent extends StatelessWidget {
               // Map
               if ((b.googleMapIframe ?? '').isNotEmpty) ...[
                 const SizedBox(height: AppConstants.spaceLg),
-                _SectionHeader(title: 'Bản đồ'),
+                _SectionHeader(title: l.branchDetailMap),
                 const SizedBox(height: AppConstants.spaceSm),
                 Container(
                   height: 200,
@@ -339,18 +350,19 @@ class _MapWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     if (url.isEmpty) {
       return Container(
         color: AppColors.warm,
-        child: const Center(
+        child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.map_outlined, size: 40, color: AppColors.textMuted),
-              SizedBox(height: 8),
+              const Icon(Icons.map_outlined, size: 40, color: AppColors.textMuted),
+              const SizedBox(height: 8),
               Text(
-                'Bản đồ không khả dụng',
-                style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+                l.branchDetailMapUnavailable,
+                style: const TextStyle(color: AppColors.textMuted, fontSize: 13),
               ),
             ],
           ),
@@ -371,9 +383,9 @@ class _MapWidget extends StatelessWidget {
               children: [
                 const Icon(Icons.map, size: 40, color: AppColors.primary),
                 const SizedBox(height: 8),
-                const Text(
-                  'Bản đồ',
-                  style: TextStyle(
+                Text(
+                  l.branchDetailMap,
+                  style: const TextStyle(
                     color: AppColors.primary,
                     fontWeight: FontWeight.w700,
                   ),
@@ -398,17 +410,15 @@ class _MapWidget extends StatelessWidget {
           child: ElevatedButton.icon(
             onPressed: () {
               // TODO: dùng url_launcher để mở map
-              // import 'package:url_launcher/url_launcher.dart';
-              // if (await canLaunchUrl(Uri.parse(decoded))) launchUrl(Uri.parse(decoded));
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Mở bản đồ trong trình duyệt...'),
+                SnackBar(
+                  content: Text(l.branchDetailMapOpen),
                   behavior: SnackBarBehavior.floating,
                 ),
               );
             },
             icon: const Icon(Icons.open_in_new, size: 14),
-            label: const Text('Mở bản đồ'),
+            label: Text(l.branchDetailMapOpen),
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               minimumSize: Size.zero,
@@ -598,15 +608,16 @@ class _ErrorContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.all(AppConstants.spaceLg),
       child: Column(
         children: [
           const Icon(Icons.error_outline, size: 48, color: AppColors.accent),
           const SizedBox(height: 12),
-          const Text(
-            'Không tải được thông tin chi nhánh',
-            style: TextStyle(
+          Text(
+            l.branchDetailErrorTitle,
+            style: const TextStyle(
               fontWeight: FontWeight.w700,
               fontSize: 16,
               color: AppColors.textPrimary,
@@ -622,7 +633,7 @@ class _ErrorContent extends StatelessWidget {
           ElevatedButton.icon(
             onPressed: onRetry,
             icon: const Icon(Icons.refresh, size: 16),
-            label: const Text('Thử lại'),
+            label: Text(l.commonRetry),
           ),
         ],
       ),

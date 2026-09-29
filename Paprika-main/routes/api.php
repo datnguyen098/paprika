@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\DishController;
 use App\Http\Controllers\Api\ImageController;
+use App\Http\Controllers\Api\OrderController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -69,5 +70,8 @@ Route::prefix('v1')->group(function () {
 
     // Contact
     Route::post('/contact', [\App\Http\Controllers\Api\ContactController::class, 'store']);
+
+    // Orders - Flutter checkout offline
+    Route::post('/orders', [OrderController::class, 'store']);
 
 });

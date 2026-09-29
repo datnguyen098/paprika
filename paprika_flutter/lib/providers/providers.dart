@@ -1,19 +1,24 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../core/i18n/locale_controller.dart';
 import '../data/models/about_model.dart';
 import '../data/models/branch_model.dart';
+import '../data/models/cart_model.dart';
 import '../data/models/category_model.dart';
 import '../data/models/contact_model.dart';
 import '../data/models/dish_model.dart';
 import '../data/models/home_model.dart';
 import '../data/models/menu_response.dart';
+import '../data/models/order_model.dart';
 import '../data/repositories/about_repository.dart';
 import '../data/repositories/branch_repository.dart';
+import '../data/repositories/cart_repository.dart';
 import '../data/repositories/category_repository.dart';
 import '../data/repositories/contact_repository.dart';
 import '../data/repositories/dish_repository.dart';
 import '../data/repositories/home_repository.dart';
+import '../data/repositories/order_repository.dart';
 import '../services/api_service.dart';
 import '../services/storage_service.dart';
 
@@ -64,27 +69,43 @@ final contactRepositoryProvider = Provider<ContactRepository>((ref) {
   return ContactRepository(ref.watch(apiServiceProvider));
 });
 
+final cartRepositoryProvider = Provider<CartRepository>((ref) {
+  return CartRepository(ref.watch(sharedPrefsProvider));
+});
+
+final orderRepositoryProvider = Provider<OrderRepository>((ref) {
+  return OrderRepository(ref.watch(apiServiceProvider));
+});
+
 // ============================================================
 // DATA PROVIDERS - dùng cho UI
 // ============================================================
+//
+// Mỗi provider có `ref.watch(localeProvider)` để khi user đổi ngôn ngữ qua
+// header switcher, toàn bộ providers tự động invalidate + fetch lại với
+// `Accept-Language` header mới (đã được set ở ApiService interceptor).
 
 /// Load categories - dùng cho menu screen, filter,...
 final categoriesProvider = FutureProvider.autoDispose<List<Category>>((ref) async {
+  ref.watch(localeProvider);
   return ref.watch(categoryRepositoryProvider).getCategories();
 });
 
 /// Món nổi bật - dùng cho home screen
 final featuredDishesProvider = FutureProvider.autoDispose<List<Dish>>((ref) async {
+  ref.watch(localeProvider);
   return ref.watch(dishRepositoryProvider).getFeaturedDishes(limit: 10);
 });
 
 /// Home page data (banners, categories, featured, testimonials, posts, promo).
 final homeProvider = FutureProvider.autoDispose<HomeData>((ref) async {
+  ref.watch(localeProvider);
   return ref.watch(homeRepositoryProvider).getHome();
 });
 
 /// Danh sách tất cả chi nhánh active.
 final branchesProvider = FutureProvider.autoDispose<List<Branch>>((ref) async {
+  ref.watch(localeProvider);
   return ref.watch(branchRepositoryProvider).getBranches();
 });
 
@@ -93,11 +114,13 @@ final branchesProvider = FutureProvider.autoDispose<List<Branch>>((ref) async {
 /// nhiều lần cùng id, BE chỉ gọi 1 lần.
 final branchDetailProvider =
     FutureProvider.autoDispose.family<Branch, int>((ref, id) async {
+  ref.watch(localeProvider);
   return ref.watch(branchRepositoryProvider).getBranch(id);
 });
 
 /// Trang Giới thiệu (about).
 final aboutProvider = FutureProvider.autoDispose<AboutData>((ref) async {
+  ref.watch(localeProvider);
   return ref.watch(aboutRepositoryProvider).getAbout();
 });
 
@@ -179,6 +202,7 @@ class MenuFilter {
 /// Load menu theo filter - dùng cho menu screen
 final menuProvider = FutureProvider.autoDispose
     .family<PagedResponse<Dish>, MenuFilter>((ref, filter) async {
+  ref.watch(localeProvider);
   return ref.watch(dishRepositoryProvider).getMenu(
         categoryId: filter.categoryId,
         categorySlug: filter.categorySlug,
@@ -192,6 +216,7 @@ final menuProvider = FutureProvider.autoDispose
 /// Search results
 final searchDishesProvider =
     FutureProvider.autoDispose.family<List<Dish>, String>((ref, keyword) async {
+  ref.watch(localeProvider);
   if (keyword.trim().length < 2) return [];
   return ref.watch(dishRepositoryProvider).searchDishes(keyword);
 });
@@ -199,7 +224,47 @@ final searchDishesProvider =
 /// Chi tiết món
 final dishDetailProvider =
     FutureProvider.autoDispose.family<DishDetail, int>((ref, id) async {
+  ref.watch(localeProvider);
   return ref.watch(dishRepositoryProvider).getDishDetail(id);
+});
+
+class CartController extends StateNotifier<CartData> {
+  CartController(this._repository) : super(_repository.getCart());
+
+  final CartRepository _repository;
+
+  Future<void> addItem(CartItem item) async {
+    state = await _repository.addItem(item);
+  }
+
+  Future<void> updateQuantity(String lineKey, int quantity) async {
+    state = await _repository.updateQuantity(lineKey, quantity);
+  }
+
+  Future<void> removeItem(String lineKey) async {
+    state = await _repository.removeItem(lineKey);
+  }
+
+  Future<void> clear() async {
+    state = await _repository.clear();
+  }
+
+  void reload() {
+    state = _repository.getCart();
+  }
+}
+
+final cartProvider = StateNotifierProvider<CartController, CartData>((ref) {
+  return CartController(ref.watch(cartRepositoryProvider));
+});
+
+final cartCountProvider = Provider<int>((ref) {
+  return ref.watch(cartProvider).count;
+});
+
+final createOrderProvider = FutureProvider.autoDispose
+    .family<OrderResponse, CreateOrderRequest>((ref, request) async {
+  return ref.watch(orderRepositoryProvider).createOrder(request);
 });
 
 // ============================================================
@@ -212,8 +277,14 @@ final dishDetailProvider =
 final selectedBranchIdProvider = StateProvider<int?>((ref) => null);
 
 /// Locale hiện tại (vi/en/el). Dùng cho language switcher.
-/// Khi user đổi locale, set vào storage và invalidate homeProvider
-/// để fetch lại data đúng ngôn ngữ.
+///
+/// Đã được tách sang `lib/core/i18n/locale_controller.dart` để mirror
+/// cấu trúc Laravel (SetLocale middleware + LocaleController.dart tương ứng).
+/// Khi user đổi locale, state update → toàn app rebuild + Accept-Language
+/// header của next API request update theo locale mới.
+///
+/// Sử dụng:
+///   `import '../core/i18n/locale_controller.dart' show localeProvider;`
 final currentLocaleProvider = StateProvider<String>((ref) {
   return ref.watch(storageServiceProvider).getLocale() ?? 'vi';
 });

@@ -29,6 +29,7 @@ class Branch extends Equatable {
     this.acceptsOnlineOrders,
     this.acceptsPickupOrders,
     this.acceptsDeliveryOrders,
+    this.acceptsOfflinePayment,
     this.deliveryMinOrderAmount,
     this.deliveryFreeOrderAmount,
     this.deliveryMaxDistanceKm,
@@ -58,6 +59,7 @@ class Branch extends Equatable {
   final bool? acceptsOnlineOrders;
   final bool? acceptsPickupOrders;
   final bool? acceptsDeliveryOrders;
+  final bool? acceptsOfflinePayment;
   final int? deliveryMinOrderAmount;
   final int? deliveryFreeOrderAmount;
   final double? deliveryMaxDistanceKm;
@@ -124,6 +126,7 @@ class Branch extends Equatable {
       acceptsOnlineOrders: json['accepts_online_orders'] as bool?,
       acceptsPickupOrders: json['accepts_pickup_orders'] as bool?,
       acceptsDeliveryOrders: json['accepts_delivery_orders'] as bool?,
+      acceptsOfflinePayment: json['accepts_offline_payment'] as bool?,
       deliveryMinOrderAmount:
           json['delivery_min_order_amount'] != null
               ? (json['delivery_min_order_amount'] as num).toInt()

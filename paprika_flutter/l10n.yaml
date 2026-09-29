@@ -1,0 +1,9 @@
+# Flutter gen-l10n configuration.
+# Dùng AppLocalizations.of(context).<key> trong code thay vì String cứng.
+# Docs: https://docs.flutter.dev/ui/accessibility-and-internationalization/internationalization
+arb-dir: lib/l10n
+template-arb-file: app_en.arb
+output-localization-file: app_localizations.dart
+output-class: AppLocalizations
+nullable-getter: false
+output-dir: lib/l10n/generated

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/constants/app_colors.dart';
 import '../core/constants/app_constants.dart';
+import '../l10n/generated/app_localizations.dart';
 import 'coming_soon.dart';
 
 /// Footer 4 cột theo Laravel Blade storefront (`footer.blade.php`).
@@ -10,25 +11,6 @@ import 'coming_soon.dart';
 /// Team BE sẽ thay bằng data thật từ API sau.
 class PaprikaFooter extends StatelessWidget {
   const PaprikaFooter({super.key});
-
-  static const _brandName = 'PAPRIKA PATRAS';
-  static const _brandDesc =
-      'Nhà hàng ẩm thực Việt Nam & món nướng Hy Lạp tại Patras. '
-      'Phục vụ phở, bánh mì, nem nướng và các món Hy Lạp truyền thống '
-      'trong không gian ấm cúng, nhanh gọn và chỉn chu.';
-
-  static const _hotlineLabel = 'Hotline';
-  static const _hotline = '+30 2610 123 456';
-
-  static const _tagline =
-      'Hương vị Việt Nam - Tinh hoa Hy Lạp. Đặt bàn hoặc giao tận nơi.';
-
-  static const _exploreTitle = 'Khám phá';
-  static const _serviceTitle = 'Dịch vụ';
-  static const _newsletterTitle = 'Bản tin';
-
-  static const _openingHours = 'T2-T6: 11:30 - 23:00\nT7-CN: 11:00 - 01:00';
-  static const _address = 'Patras, Greece';
 
   @override
   Widget build(BuildContext context) {
@@ -91,7 +73,7 @@ class _HotlineBand extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        'Hotline',
+                        AppLocalizations.of(context).footerHotline,
                         style: TextStyle(
                           color: AppColors.sage,
                           fontSize: 11,
@@ -100,7 +82,7 @@ class _HotlineBand extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        PaprikaFooter._hotline,
+                        AppLocalizations.of(context).footerHotlineNumber,
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 16,
@@ -119,7 +101,7 @@ class _HotlineBand extends StatelessWidget {
                   top: isNarrow ? AppConstants.spaceSm : 0,
                 ),
                 child: Text(
-                  PaprikaFooter._tagline,
+                  AppLocalizations.of(context).footerTagline,
                   style: TextStyle(
                     color: AppColors.sage,
                     fontSize: 13,
@@ -206,6 +188,7 @@ class _BrandCol extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -228,7 +211,7 @@ class _BrandCol extends StatelessWidget {
             const SizedBox(width: AppConstants.spaceSm),
             Flexible(
               child: Text(
-                PaprikaFooter._brandName,
+                l.aboutCardBrand,
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 16,
@@ -241,8 +224,9 @@ class _BrandCol extends StatelessWidget {
           ],
         ),
         const SizedBox(height: AppConstants.spaceMd),
+        // Brand description dùng aboutCardBrand key (giống nội dung) cho đồng bộ.
         Text(
-          PaprikaFooter._brandDesc,
+          l.aboutCardBody,
           style: TextStyle(
             color: AppColors.sageLight,
             fontSize: 12,
@@ -258,26 +242,27 @@ class _BrandCol extends StatelessWidget {
 class _ExploreCol extends StatelessWidget {
   const _ExploreCol();
 
-  // Mỗi link có feature name riêng để snackbar "đang phát triển" gợi ý rõ hơn.
-  static const _links = [
-    ('Trang chủ', '/home', null),           // null = không show snackbar (route đang ở đây)
-    ('Thực đơn', '/menu', 'Thực đơn'),
-    ('Giới thiệu', '/about', 'Giới thiệu'),
-    ('Đặt bàn', '/reservation', 'Đặt bàn'),
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    // Mỗi link có feature name riêng để snackbar "đang phát triển" gợi ý rõ hơn.
+    final links = <(String, String, String)>[
+      (l.navHome, '/home', ''), // empty = không show snackbar (đang ở đây)
+      (l.navMenu, '/menu', l.footerMenuFeature),
+      (l.navAbout, '/about', l.footerAboutFeature),
+      (l.navReservation, '/reservation', l.footerReservationFeature),
+    ];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _SectionTitle(title: PaprikaFooter._exploreTitle),
+        _SectionTitle(title: l.footerExplore),
         const SizedBox(height: AppConstants.spaceMd),
-        for (final (label, route, feature) in _links) ...[
+        for (final (label, route, feature) in links) ...[
           _FooterLink(
             label: label,
             route: route,
-            onTap: feature == null
+            onTap: feature.isEmpty
                 ? null
                 : () => ComingSoon.show(context, feature: feature),
           ),
@@ -293,27 +278,28 @@ class _ServiceCol extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _SectionTitle(title: PaprikaFooter._serviceTitle),
+        _SectionTitle(title: l.footerServices),
         const SizedBox(height: AppConstants.spaceMd),
         _ServiceItem(
           icon: Icons.schedule,
-          title: 'Giờ mở cửa',
-          content: PaprikaFooter._openingHours,
+          title: l.footerHoursTitle,
+          content: l.footerHours,
         ),
         const SizedBox(height: AppConstants.spaceSm),
         _ServiceItem(
           icon: Icons.location_on,
-          title: 'Địa chỉ',
-          content: PaprikaFooter._address,
+          title: l.footerAddressTitle,
+          content: l.footerAddress,
         ),
         const SizedBox(height: AppConstants.spaceSm),
         _ServiceItem(
           icon: Icons.phone,
-          title: 'Hotline',
-          content: PaprikaFooter._hotline,
+          title: l.footerHotline,
+          content: l.footerHotlineNumber,
         ),
       ],
     );
@@ -387,18 +373,20 @@ class _NewsletterColState extends State<_NewsletterCol> {
 
   void _submit() {
     // Newsletter endpoint chưa có trong BE - dùng snackbar "đang phát triển".
-    ComingSoon.show(context, feature: 'Đăng ký bản tin');
+    final l = AppLocalizations.of(context);
+    ComingSoon.show(context, feature: l.footerNewsletterFeature);
   }
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _SectionTitle(title: PaprikaFooter._newsletterTitle),
+        _SectionTitle(title: l.footerNewsletter),
         const SizedBox(height: AppConstants.spaceMd),
         Text(
-          'Đăng ký nhận ưu đãi đặc biệt và cập nhật từ Paprika Patras.',
+          l.footerNewsletterBody,
           style: TextStyle(
             color: AppColors.sageLight,
             fontSize: 12,
@@ -410,7 +398,7 @@ class _NewsletterColState extends State<_NewsletterCol> {
           controller: _controller,
           style: const TextStyle(color: Colors.white, fontSize: 13),
           decoration: InputDecoration(
-            hintText: 'Email của bạn...',
+            hintText: l.footerNewsletterPlaceholder,
             hintStyle: TextStyle(
               color: Colors.green.shade900.withValues(alpha: 0.6),
               fontSize: 13,
@@ -539,12 +527,13 @@ class _CopyrightBar extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final isNarrow = constraints.maxWidth < 480;
+          final copyright = AppLocalizations.of(context).footerCopyright;
           if (isNarrow) {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Text(
-                  '© 2026 Paprika Patras. Mọi quyền được bảo lưu.',
+                  copyright,
                   style: TextStyle(
                     color: AppColors.sageLight.withValues(alpha: 0.5),
                     fontSize: 11,
@@ -559,7 +548,7 @@ class _CopyrightBar extends StatelessWidget {
           return Row(
             children: [
               Text(
-                '© 2026 Paprika Patras. Mọi quyền được bảo lưu.',
+                copyright,
                 style: TextStyle(
                   color: AppColors.sageLight.withValues(alpha: 0.5),
                   fontSize: 11,
@@ -580,19 +569,20 @@ class _LegalLinks extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Wrap(
       spacing: AppConstants.spaceMd,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         _LegalLink(
-          label: 'Liên hệ',
-          onTap: () => ComingSoon.show(context, feature: 'Liên hệ'),
+          label: l.footerLinkContact,
+          onTap: () => ComingSoon.show(context, feature: l.footerContactFeature),
         ),
         _LegalLink(
-          label: 'Tra cứu đơn',
+          label: l.footerLinkOrderLookup,
           color: AppColors.accent,
           bold: true,
-          onTap: () => ComingSoon.show(context, feature: 'Tra cứu đơn'),
+          onTap: () => ComingSoon.show(context, feature: l.featureOrders),
         ),
       ],
     );

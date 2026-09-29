@@ -53,7 +53,7 @@ class DishController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = Dish::query()
-            ->with(['category', 'translations'])
+            ->with(['translations', 'category.translations', 'timeSlots.translations'])
             ->active();
 
         // Filter theo category_id
@@ -93,7 +93,7 @@ class DishController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Lấy danh sách món ăn thành công',
-            'data' => $dishes->map(fn ($dish) => $this->transformDishSummary($dish)),
+            'data' => $this->transformDishSummaries($dishes->getCollection()),
             'meta' => [
                 'current_page' => $dishes->currentPage(),
                 'last_page' => $dishes->lastPage(),
@@ -117,7 +117,7 @@ class DishController extends Controller
         $limit = $request->integer('limit', 10);
         
         $dishes = Dish::query()
-            ->with(['category'])
+            ->with(['translations', 'category.translations', 'timeSlots.translations'])
             ->active()
             ->featured()
             ->orderBy('sort_order')
@@ -127,7 +127,7 @@ class DishController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Lấy danh sách món nổi bật thành công',
-            'data' => $dishes->map(fn ($dish) => $this->transformDishSummary($dish)),
+            'data' => $this->transformDishSummaries($dishes),
         ]);
     }
 
@@ -253,7 +253,7 @@ class DishController extends Controller
                 }),
                 'nutrition' => $this->buildNutrition($dish),
                 'allergens' => $this->buildAllergens($dish),
-                'related_dishes' => $relatedDishes->map(fn (Dish $d) => $this->transformDishSummary($d))->values(),
+                'related_dishes' => $this->transformDishSummaries($relatedDishes),
                 'stats' => [
                     'prep_label' => __('site.dish_detail.prep'),
                     'prep_value' => __('site.dish_detail.prep_value'),
@@ -275,7 +275,7 @@ class DishController extends Controller
     protected function resolveRelatedDishes(Dish $dish): \Illuminate\Support\Collection
     {
         $related = Dish::query()
-            ->with(['category.translations', 'translations', 'activeOptionGroups.options.translations'])
+            ->with(['translations', 'category.translations', 'timeSlots.translations'])
             ->active()
             ->where('category_id', $dish->category_id)
             ->whereKeyNot($dish->getKey())
@@ -285,7 +285,7 @@ class DishController extends Controller
             ->get();
 
         $pairing = Dish::query()
-            ->with(['category.translations', 'translations', 'activeOptionGroups.options.translations'])
+            ->with(['translations', 'category.translations', 'timeSlots.translations'])
             ->active()
             ->featured()
             ->whereKeyNot($dish->getKey())
@@ -294,7 +294,30 @@ class DishController extends Controller
             ->limit(4)
             ->get();
 
-        return $related->merge($pairing)->unique('id')->take(4);
+        $suggested = $related->merge($pairing)->unique('id')->values();
+
+        if ($suggested->count() < 4) {
+            $excludeIds = $suggested
+                ->pluck('id')
+                ->push($dish->getKey())
+                ->unique()
+                ->values()
+                ->all();
+
+            $fallback = Dish::query()
+                ->with(['translations', 'category.translations', 'timeSlots.translations'])
+                ->active()
+                ->whereNotIn('id', $excludeIds)
+                ->orderByDesc('is_featured')
+                ->orderBy('sort_order')
+                ->orderBy('id')
+                ->limit(4 - $suggested->count())
+                ->get();
+
+            $suggested = $suggested->merge($fallback)->unique('id')->values();
+        }
+
+        return $suggested->take(4);
     }
 
     /**
@@ -410,7 +433,7 @@ class DishController extends Controller
         }
 
         $dishes = Dish::query()
-            ->with(['category'])
+            ->with(['translations', 'category.translations', 'timeSlots.translations'])
             ->active()
             ->search($keyword)
             ->orderBy('is_featured', 'desc')
@@ -421,8 +444,18 @@ class DishController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Tìm kiếm thành công',
-            'data' => $dishes->map(fn ($dish) => $this->transformDishSummary($dish)),
+            'data' => $this->transformDishSummaries($dishes),
         ]);
+    }
+
+    protected function transformDishSummaries($dishes): array
+    {
+        $branch = active_branch();
+
+        return $dishes
+            ->map(fn ($dish) => $this->transformDishSummary($dish, $branch))
+            ->values()
+            ->all();
     }
 
     /**
@@ -431,21 +464,21 @@ class DishController extends Controller
      * @param Dish $dish
      * @return array
      */
-    protected function transformDishSummary(Dish $dish): array
+    protected function transformDishSummary(Dish $dish, $branch = null): array
     {
-        $branch = active_branch();
         $availability = $branch ? $this->availability->check($dish, $branch) : null;
+        $description = $dish->localized('description');
 
         return [
             'id' => $dish->id,
             'name' => $dish->localized('name'),
             'slug' => $dish->slug,
-            'description' => $dish->localized('description') 
-                ? Str::limit(strip_tags($dish->localized('description')), 100) 
+            'description' => $description
+                ? Str::limit(strip_tags($description), 100)
                 : null,
             'price' => (int) $dish->price,
             'sale_price' => $dish->sale_price ? (int) $dish->sale_price : null,
-                'image' => $this->imageUrl($dish->image),
+            'image' => $this->imageUrl($dish->image),
             'is_featured' => $dish->is_featured,
             'is_available' => $availability?->available ?? true,
             'availability_label' => $availability?->label(),

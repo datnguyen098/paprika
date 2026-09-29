@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/constants/app_colors.dart';
 import '../core/constants/app_constants.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../widgets/bottom_nav_bar.dart';
 import '../widgets/coming_soon.dart';
 import '../widgets/paprika_footer.dart';
@@ -73,6 +74,7 @@ class _ReservationScreenState extends ConsumerState<ReservationScreen> {
       }
     }
     final currentTime = _selectedTime;
+    final l = AppLocalizations.of(context);
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: AppColors.surface,
@@ -93,11 +95,11 @@ class _ReservationScreenState extends ConsumerState<ReservationScreen> {
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Text(
-                  'CHỌN GIỜ ĐẾN',
-                  style: TextStyle(
+                  l.reservationFieldTime,
+                  style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 0.14,
@@ -160,6 +162,7 @@ class _ReservationScreenState extends ConsumerState<ReservationScreen> {
   }
 
   void _pickGuests() {
+    final l = AppLocalizations.of(context);
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: AppColors.surface,
@@ -180,11 +183,11 @@ class _ReservationScreenState extends ConsumerState<ReservationScreen> {
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Text(
-                  'SỐ KHÁCH',
-                  style: TextStyle(
+                  l.guestsPickerTitle,
+                  style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 0.14,
@@ -200,7 +203,7 @@ class _ReservationScreenState extends ConsumerState<ReservationScreen> {
                     final isSelected = n == _guests;
                     return ListTile(
                       title: Text(
-                        '$n ${n == 1 ? "khách" : "khách"}',
+                        l.guestsPickerItem(n),
                         style: TextStyle(
                           fontWeight: isSelected
                               ? FontWeight.w900
@@ -231,7 +234,8 @@ class _ReservationScreenState extends ConsumerState<ReservationScreen> {
 
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
-    ComingSoon.show(context, feature: 'Đặt bàn');
+    final l = AppLocalizations.of(context);
+    ComingSoon.show(context, feature: l.featureReservation);
   }
 
   @override
@@ -324,6 +328,7 @@ class _PageTitleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(
@@ -356,9 +361,9 @@ class _PageTitleCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              const Text(
-                'ĐẶT BÀN',
-                style: TextStyle(
+              Text(
+                l.reservationBadge,
+                style: const TextStyle(
                   color: AppColors.gold,
                   fontSize: 11,
                   fontWeight: FontWeight.w900,
@@ -368,9 +373,9 @@ class _PageTitleCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          const Text(
-            'GIỮ BÀN TẠI PAPRIKA',
-            style: TextStyle(
+          Text(
+            l.reservationHeroTitle,
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 24,
               fontWeight: FontWeight.w900,
@@ -380,7 +385,7 @@ class _PageTitleCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'Chọn cơ sở, ngày, giờ và số khách. Quán sẽ xác nhận đặt bàn qua điện thoại.',
+            l.reservationSubtitle,
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.85),
               fontSize: 13,
@@ -392,9 +397,9 @@ class _PageTitleCard extends StatelessWidget {
             children: [
               Expanded(
                 child: _QuickAction(
-                  label: 'NGÀY',
+                  label: l.quickActionDateLabel,
                   value: _dateLabel,
-                  hint: 'CHỌN',
+                  hint: l.quickActionDateHint,
                   icon: Icons.calendar_today_outlined,
                   onTap: onPickDate,
                 ),
@@ -402,8 +407,8 @@ class _PageTitleCard extends StatelessWidget {
               const SizedBox(width: AppConstants.spaceSm),
               Expanded(
                 child: _QuickAction(
-                  label: 'GIỜ',
-                  value: 'mở',
+                  label: l.quickActionTimeLabel,
+                  value: l.quickActionTimeHintValue,
                   hint: time,
                   icon: Icons.schedule_outlined,
                   onTap: onPickTime,
@@ -412,8 +417,8 @@ class _PageTitleCard extends StatelessWidget {
               const SizedBox(width: AppConstants.spaceSm),
               Expanded(
                 child: _QuickAction(
-                  label: 'KHÁCH',
-                  value: 'CÒN BÀN',
+                  label: l.quickActionGuestsLabel,
+                  value: l.quickActionGuestsHint,
                   hint: '$guests',
                   icon: Icons.people_alt_outlined,
                   onTap: onPickGuests,
@@ -544,6 +549,7 @@ class _InfoFormState extends State<_InfoForm> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Form(
       key: widget.formKey,
       child: Column(
@@ -560,9 +566,9 @@ class _InfoFormState extends State<_InfoForm> {
                 ),
               ),
               const SizedBox(width: 8),
-              const Text(
-                'THÔNG TIN ĐẶT BÀN',
-                style: TextStyle(
+              Text(
+                l.reservationTitle,
+                style: const TextStyle(
                   color: AppColors.primaryStrong,
                   fontSize: 13,
                   fontWeight: FontWeight.w900,
@@ -576,42 +582,43 @@ class _InfoFormState extends State<_InfoForm> {
             ],
           ),
           const SizedBox(height: AppConstants.spaceMd),
+          const SizedBox(height: AppConstants.spaceMd),
           _LabeledField(
-            label: 'Họ tên',
+            label: l.reservationFieldName,
             required: true,
             child: TextFormField(
               controller: widget.nameCtrl,
-              decoration: const InputDecoration(
-                hintText: 'Nguyễn Văn A',
-                prefixIcon: Icon(Icons.person_outline,
+              decoration: InputDecoration(
+                hintText: l.contactFieldNameHint,
+                prefixIcon: const Icon(Icons.person_outline,
                     color: AppColors.primary, size: 20),
               ),
               validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Vui lòng nhập họ tên' : null,
+                  (v == null || v.trim().isEmpty) ? l.validationNameRequired : null,
             ),
           ),
           _LabeledField(
-            label: 'Điện thoại',
+            label: l.reservationFieldPhone,
             required: true,
             child: TextFormField(
               controller: widget.phoneCtrl,
               keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(
-                hintText: '+30 2610 123 456',
-                prefixIcon: Icon(Icons.phone_outlined,
+              decoration: InputDecoration(
+                hintText: l.contactFieldPhoneHint,
+                prefixIcon: const Icon(Icons.phone_outlined,
                     color: AppColors.primary, size: 20),
               ),
               validator: (v) {
                 if (v == null || v.trim().isEmpty) {
-                  return 'Vui lòng nhập số điện thoại';
+                  return l.validationPhoneRequired;
                 }
-                if (v.trim().length < 6) return 'Số điện thoại không hợp lệ';
+                if (v.trim().length < 6) return l.validationPhoneInvalid;
                 return null;
               },
             ),
           ),
           _LabeledField(
-            label: 'Email',
+            label: l.reservationFieldEmail,
             child: TextFormField(
               controller: widget.emailCtrl,
               keyboardType: TextInputType.emailAddress,
@@ -623,12 +630,12 @@ class _InfoFormState extends State<_InfoForm> {
               validator: (v) {
                 if (v == null || v.isEmpty) return null;
                 final ok = RegExp(r'^[\w.\-+]+@[\w\-]+\.[\w\-.]+$').hasMatch(v);
-                return ok ? null : 'Email không hợp lệ';
+                return ok ? null : l.validationEmailInvalid;
               },
             ),
           ),
           _LabeledField(
-            label: 'Cơ sở',
+            label: l.reservationFieldBranch,
             required: true,
             child: DropdownButtonFormField<String>(
               initialValue: _selectedBranch,
@@ -643,11 +650,11 @@ class _InfoFormState extends State<_InfoForm> {
               ],
               onChanged: (v) => setState(() => _selectedBranch = v),
               validator: (v) =>
-                  v == null ? 'Vui lòng chọn cơ sở' : null,
+                  v == null ? l.validationBranchRequired : null,
             ),
           ),
           _LabeledField(
-            label: 'Ngày',
+            label: l.reservationFieldDate,
             child: Container(
               padding: const EdgeInsets.symmetric(
                 horizontal: 12,
@@ -683,14 +690,14 @@ class _InfoFormState extends State<_InfoForm> {
             child: ElevatedButton.icon(
               onPressed: widget.onSubmit,
               icon: const Icon(Icons.event_available),
-              label: const Text('GIỮ BÀN NGAY'),
+              label: Text(l.reservationSubmit),
             ),
           ),
           const SizedBox(height: AppConstants.spaceSm),
           Center(
             child: Text(
-              'Quán sẽ gọi điện xác nhận trong vòng 30 phút.',
-              style: TextStyle(
+              l.reservationReplyHint,
+              style: const TextStyle(
                 color: AppColors.textMuted,
                 fontSize: 11,
                 fontStyle: FontStyle.italic,
@@ -716,6 +723,7 @@ class _LabeledField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: AppConstants.spaceMd),
       child: Column(
@@ -733,9 +741,9 @@ class _LabeledField extends StatelessWidget {
                 ),
               ),
               if (required)
-                const Text(
-                  ' *',
-                  style: TextStyle(
+                Text(
+                  l.requiredAsterisk,
+                  style: const TextStyle(
                     color: AppColors.accent,
                     fontSize: 12,
                     fontWeight: FontWeight.w900,
@@ -760,6 +768,7 @@ class _FloatingActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     // Padding-bottom = bottom nav height (~72px) + safe area + gap.
     final bottomInset = MediaQuery.of(context).padding.bottom;
     return Positioned(
@@ -770,15 +779,15 @@ class _FloatingActions extends StatelessWidget {
           _FloatingButton(
             icon: Icons.phone,
             color: AppColors.primary,
-            tooltip: 'Gọi hotline',
-            onTap: () => ComingSoon.show(context, feature: 'Gọi hotline'),
+            tooltip: l.reservationCallTooltip,
+            onTap: () => ComingSoon.show(context, feature: l.fabCallFeature),
           ),
           const SizedBox(height: 10),
           _FloatingButton(
             icon: Icons.chat_bubble_outline,
             color: AppColors.accent,
-            tooltip: 'Chat với quán',
-            onTap: () => ComingSoon.show(context, feature: 'Chat với quán'),
+            tooltip: l.reservationChatTooltip,
+            onTap: () => ComingSoon.show(context, feature: l.reservationChatFeature),
           ),
         ],
       ),

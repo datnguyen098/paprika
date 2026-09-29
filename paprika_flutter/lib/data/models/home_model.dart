@@ -162,7 +162,7 @@ class HomeFeaturedDish extends Equatable {
   final int id;
   final String name;
   final String image;
-  final int price; // EUR minor units
+  final int price; // EUR minor units, same as Laravel format_money()
   final int? oldPrice;
   final double? rating;
   final bool isNew;

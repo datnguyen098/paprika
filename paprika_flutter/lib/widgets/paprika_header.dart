@@ -5,7 +5,13 @@ import 'package:go_router/go_router.dart';
 import '../app/routes.dart';
 import '../core/constants/app_colors.dart';
 import '../core/constants/app_constants.dart';
+import '../core/config/locales.dart';
+import '../core/i18n/locale_controller.dart';
+import '../l10n/generated/app_localizations.dart';
+import '../providers/providers.dart';
+import 'cart_drawer.dart';
 import 'coming_soon.dart';
+import 'page_transition_loader.dart';
 
 /// Header sticky theo Laravel Blade storefront (`header.blade.php`).
 ///
@@ -22,8 +28,8 @@ import 'coming_soon.dart';
 /// để header "sticky" tự nhiên — Flutter không có CSS `position: sticky`,
 /// nên widget KHÔNG tự xử lý sticky; parent screen quyết định layout.
 ///
-/// Hiện tại [cartItemsCount] là `int` truyền vào (hardcode 0 trong base).
-/// Team FE/BE sẽ thay bằng `ref.watch(cartCountProvider)` sau khi có cart repo.
+/// [cartItemsCount] chỉ còn là fallback cho preview/test; trong app thật badge
+/// đọc từ `cartCountProvider`.
 class PaprikaHeader extends ConsumerStatefulWidget {
   const PaprikaHeader({
     super.key,
@@ -45,13 +51,15 @@ class PaprikaHeader extends ConsumerStatefulWidget {
 class _PaprikaHeaderState extends ConsumerState<PaprikaHeader> {
   bool _isMobileMenuOpen = false;
 
-  static const _navItems = <_NavItem>[
-    _NavItem(label: 'Trang chủ', route: AppRoutes.home),
-    _NavItem(label: 'Thực đơn', route: AppRoutes.menu),
-    _NavItem(label: 'Giới thiệu', route: AppRoutes.about, icon: Icons.info_outline),
-    _NavItem(label: 'Chi nhánh', route: AppRoutes.branches, icon: Icons.storefront_outlined),
-    _NavItem(label: 'Liên hệ', route: AppRoutes.contact, icon: Icons.contact_mail_outlined),
-    _NavItem(label: 'Đặt bàn', route: AppRoutes.reservation),
+  /// Build nav items list từ AppLocalizations.
+  /// Phải là method (không const) vì phụ thuộc locale hiện tại.
+  List<_NavItem> _buildNavItems(AppLocalizations l) => <_NavItem>[
+    _NavItem(label: l.navHome, route: AppRoutes.home),
+    _NavItem(label: l.navMenu, route: AppRoutes.menu),
+    _NavItem(label: l.navAbout, route: AppRoutes.about, icon: Icons.info_outline),
+    _NavItem(label: l.navBranches, route: AppRoutes.branches, icon: Icons.storefront_outlined),
+    _NavItem(label: l.navContact, route: AppRoutes.contact, icon: Icons.contact_mail_outlined),
+    _NavItem(label: l.navReservation, route: AppRoutes.reservation),
   ];
 
   String get _currentRoute {
@@ -70,32 +78,36 @@ class _PaprikaHeaderState extends ConsumerState<PaprikaHeader> {
         route == AppRoutes.branches ||
         route == AppRoutes.contact ||
         route == AppRoutes.menu ||
+        route == AppRoutes.cart ||
+        route == AppRoutes.checkout ||
         route == AppRoutes.reservation) {
+      context.showPageLoader();
       context.go(route);
       return;
     }
 
     // Route chưa có screen -> show snackbar "đang phát triển".
-    final featureName = _featureNameFor(route);
+    final l = AppLocalizations.of(context);
+    final featureName = _featureNameFor(route, l);
     ComingSoon.show(context, feature: featureName);
   }
 
-  String? _featureNameFor(String route) {
+  String? _featureNameFor(String route, AppLocalizations l) {
     switch (route) {
       case AppRoutes.menu:
-        return 'Thực đơn';
+        return l.featureMenu;
       case AppRoutes.cart:
-        return 'Giỏ hàng';
+        return l.featureCart;
       case AppRoutes.reservations:
-        return 'Danh sách đặt bàn';
+        return l.featureReservations;
       case AppRoutes.search:
-        return 'Tìm món';
+        return l.featureSearch;
       case AppRoutes.profile:
-        return 'Hồ sơ';
+        return l.featureProfile;
       case AppRoutes.orders:
-        return 'Đơn hàng';
+        return l.featureOrders;
       case AppRoutes.notifications:
-        return 'Thông báo';
+        return l.featureNotifications;
       default:
         return null;
     }
@@ -127,14 +139,17 @@ class _PaprikaHeaderState extends ConsumerState<PaprikaHeader> {
   }
 
   Widget _buildTopBar(BuildContext context) {
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final isCompact = screenWidth < 380;
+    final isTiny = screenWidth < 320;
     return Container(
       decoration: const BoxDecoration(
         border: Border(
           bottom: BorderSide(color: AppColors.primaryStrong, width: 1),
         ),
       ),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppConstants.spaceMd,
+      padding: EdgeInsets.symmetric(
+        horizontal: isTiny ? 6 : (isCompact ? 10 : AppConstants.spaceMd),
         vertical: AppConstants.spaceSm,
       ),
       child: LayoutBuilder(
@@ -154,8 +169,8 @@ class _PaprikaHeaderState extends ConsumerState<PaprikaHeader> {
                 _buildLanguageSelector(context),
                 const SizedBox(width: AppConstants.spaceXs),
               ],
-              _buildCartIcon(context),
-              const SizedBox(width: AppConstants.spaceXs),
+              _buildCartIcon(context, showBooking: isWide),
+              SizedBox(width: isTiny ? 2 : AppConstants.spaceXs),
               _buildMobileToggle(context),
             ],
           );
@@ -164,7 +179,11 @@ class _PaprikaHeaderState extends ConsumerState<PaprikaHeader> {
     );
   }
 
-  Widget _buildLogo(BuildContext context) {
+  Widget _buildLogo(BuildContext context, {bool showWordmark = true}) {
+    final width = MediaQuery.sizeOf(context).width;
+    final isTiny = width < 320;
+    final isCompact = width < 380;
+    final logoSize = isTiny ? 38.0 : (isCompact ? 42.0 : 48.0);
     return InkWell(
       onTap: () => _go(context, AppRoutes.home),
       borderRadius: BorderRadius.circular(8),
@@ -173,8 +192,8 @@ class _PaprikaHeaderState extends ConsumerState<PaprikaHeader> {
         children: [
           // Logo tròn 48x48 với nền trắng + shadow + viền trắng (giống PHP)
           Container(
-            width: 48,
-            height: 48,
+            width: logoSize,
+            height: logoSize,
             decoration: BoxDecoration(
               color: Colors.white,
               shape: BoxShape.circle,
@@ -198,21 +217,30 @@ class _PaprikaHeaderState extends ConsumerState<PaprikaHeader> {
               ),
             ),
           ),
-          const SizedBox(width: 10),
-          // Wordmark - ảnh "Paprika" viết tay (h-8 mobile, h-9 desktop như PHP)
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final wordmarkHeight = constraints.maxWidth >= 768 ? 36.0 : 32.0;
-              return SizedBox(
-                height: wordmarkHeight,
-                child: Image.asset(
-                  AppConstants.wordmark,
-                  fit: BoxFit.contain,
-                  alignment: Alignment.centerLeft,
-                ),
-              );
-            },
-          ),
+          if (showWordmark) ...[
+            SizedBox(width: isTiny ? 6 : 10),
+            // Wordmark - ảnh "Paprika" viết tay (h-8 mobile, h-9 desktop như PHP)
+            Builder(
+              builder: (context) {
+                final isDesktop = width >= 768;
+                final maxWordmarkWidth =
+                    isTiny ? 58.0 : (isCompact ? 82.0 : 118.0);
+                return ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: isDesktop ? 180 : maxWordmarkWidth,
+                  ),
+                  child: SizedBox(
+                    height: isDesktop ? 36 : (isTiny ? 26 : 32),
+                    child: Image.asset(
+                      AppConstants.wordmark,
+                      fit: BoxFit.contain,
+                      alignment: Alignment.centerLeft,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
         ],
       ),
     );
@@ -220,10 +248,11 @@ class _PaprikaHeaderState extends ConsumerState<PaprikaHeader> {
 
   Widget _buildDesktopNav(BuildContext context) {
     final current = _currentRoute;
+    final navItems = _buildNavItems(AppLocalizations.of(context));
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        for (final item in _navItems) ...[
+        for (final item in navItems) ...[
           _NavLink(
             label: item.label,
             icon: item.icon,
@@ -236,37 +265,97 @@ class _PaprikaHeaderState extends ConsumerState<PaprikaHeader> {
   }
 
   Widget _buildLanguageSelector(BuildContext context) {
+    // Đọc locale hiện tại từ LocaleController để highlight + rebuild khi đổi.
+    final current = ref.watch(localeProvider).languageCode;
+    final currentMeta = AppLocales.metaOf(current);
+    final isTiny = MediaQuery.sizeOf(context).width < 320;
+
     return Material(
       color: Colors.white.withValues(alpha: 0.15),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(999),
         side: const BorderSide(color: Colors.white24),
       ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(999),
-        onTap: () => ComingSoon.show(context, feature: 'Ngôn ngữ'),
-        child: const Padding(
+      child: PopupMenuButton<String>(
+        tooltip: AppLocalizations.of(context).languageSwitcherTooltip,
+        position: PopupMenuPosition.under,
+        onSelected: (code) {
+          ref.read(localeProvider.notifier).setLocale(code);
+        },
+        itemBuilder: (_) {
+          return AppLocales.supportedList.map((meta) {
+            final isSelected = meta.code == current;
+            return PopupMenuItem<String>(
+              value: meta.code,
+              child: Row(
+                children: [
+                  Text(
+                    meta.flag,
+                    style: const TextStyle(fontSize: 18),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    meta.native,
+                    style: TextStyle(
+                      fontWeight:
+                          isSelected ? FontWeight.bold : FontWeight.w500,
+                      color: isSelected
+                          ? AppColors.accent
+                          : Theme.of(context).textTheme.bodyLarge?.color,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    '(${meta.code.toUpperCase()})',
+                    style: TextStyle(
+                      color: isSelected
+                          ? AppColors.accent
+                          : Colors.grey[600],
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (isSelected) ...[
+                    const SizedBox(width: 6),
+                    const Icon(
+                      Icons.check,
+                      size: 14,
+                      color: AppColors.accent,
+                    ),
+                  ],
+                ],
+              ),
+            );
+          }).toList(growable: false);
+        },
+        child: Padding(
           padding: EdgeInsets.symmetric(
-            horizontal: 10,
-            vertical: 6,
+            horizontal: isTiny ? 6 : 8,
+            vertical: isTiny ? 5 : 6,
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'VN',
+                currentMeta.flag,
+                style: const TextStyle(fontSize: 13),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                currentMeta.code.toUpperCase(),
                 style: TextStyle(
                   color: Colors.white,
-                  fontSize: 11,
+                  fontSize: isTiny ? 10 : 11,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 0.12,
                 ),
               ),
-              SizedBox(width: 2),
+              const SizedBox(width: 2),
               Icon(
                 Icons.keyboard_arrow_down,
                 color: Colors.white,
-                size: 14,
+                size: isTiny ? 12 : 14,
               ),
             ],
           ),
@@ -275,57 +364,93 @@ class _PaprikaHeaderState extends ConsumerState<PaprikaHeader> {
     );
   }
 
-  Widget _buildCartIcon(BuildContext context) {
-    final count = widget.cartItemsCount;
-    return Stack(
-      clipBehavior: Clip.none,
+  Widget _buildCartIcon(BuildContext context, {bool showBooking = true}) {
+    final l = AppLocalizations.of(context);
+    final watchedCount = ref.watch(cartCountProvider);
+    final count = watchedCount > 0 ? watchedCount : widget.cartItemsCount;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        IconButton(
-          tooltip: 'Giỏ hàng',
-          onPressed: () => ComingSoon.show(context, feature: 'Giỏ hàng'),
-          icon: const Icon(Icons.shopping_bag_outlined, color: Colors.white),
-        ),
-        if (count > 0)
-          Positioned(
-            top: 4,
-            right: 4,
-            child: Container(
-              constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              decoration: BoxDecoration(
-                color: AppColors.accent,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 1.5),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                '$count',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 9,
-                  fontWeight: FontWeight.w900,
-                  height: 1.0,
+        if (showBooking) ...[
+          _HeaderCircleAction(
+            tooltip: l.navReservation,
+            icon: Icons.calendar_month_outlined,
+            backgroundColor: Colors.white.withValues(alpha: 0.15),
+            borderColor: Colors.white24,
+            onTap: () => _go(context, AppRoutes.reservation),
+          ),
+          const SizedBox(width: AppConstants.spaceXs),
+        ],
+        Stack(
+          clipBehavior: Clip.none,
+          children: [
+            _HeaderCircleAction(
+              tooltip: l.navCart,
+              icon: Icons.shopping_bag_outlined,
+              backgroundColor: AppColors.accent,
+              borderColor: Colors.transparent,
+              onTap: () => showCartDrawer(context),
+            ),
+            if (count > 0)
+              Positioned(
+                top: -5,
+                right: -5,
+                child: Container(
+                  constraints:
+                      const BoxConstraints(minWidth: 20, minHeight: 20),
+                  padding: const EdgeInsets.symmetric(horizontal: 5),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: AppColors.accent, width: 1),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.18),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    '$count',
+                    style: const TextStyle(
+                      color: AppColors.accent,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      height: 1.0,
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
+          ],
+        ),
       ],
     );
   }
 
   Widget _buildMobileToggle(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final isCompact = MediaQuery.sizeOf(context).width < 380;
     return IconButton(
-      tooltip: _isMobileMenuOpen ? 'Đóng menu' : 'Mở menu',
+      tooltip: _isMobileMenuOpen ? l.commonClose : l.navMenu,
       onPressed: () => setState(() => _isMobileMenuOpen = !_isMobileMenuOpen),
+      constraints: BoxConstraints.tightFor(
+        width: isCompact ? 36 : 42,
+        height: isCompact ? 36 : 42,
+      ),
+      padding: EdgeInsets.zero,
       icon: Icon(
         _isMobileMenuOpen ? Icons.close : Icons.menu,
         color: Colors.white,
+        size: isCompact ? 22 : 24,
       ),
     );
   }
 
   Widget _buildMobileMenu() {
     final current = _currentRoute;
+    final navItems = _buildNavItems(AppLocalizations.of(context));
     return Container(
       width: double.infinity,
       decoration: const BoxDecoration(
@@ -338,7 +463,7 @@ class _PaprikaHeaderState extends ConsumerState<PaprikaHeader> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          for (final item in _navItems) ...[
+          for (final item in navItems) ...[
             _MobileNavLink(
               label: item.label,
               icon: item.icon,
@@ -357,6 +482,56 @@ class _PaprikaHeaderState extends ConsumerState<PaprikaHeader> {
       return currentRoute == AppRoutes.home || currentRoute == AppRoutes.splash;
     }
     return currentRoute.startsWith(itemRoute);
+  }
+}
+
+class _HeaderCircleAction extends StatelessWidget {
+  const _HeaderCircleAction({
+    required this.tooltip,
+    required this.icon,
+    required this.backgroundColor,
+    required this.borderColor,
+    required this.onTap,
+  });
+
+  final String tooltip;
+  final IconData icon;
+  final Color backgroundColor;
+  final Color borderColor;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    final isTiny = width < 320;
+    final isCompact = width < 380;
+    return Tooltip(
+      message: tooltip,
+      child: Container(
+        width: isTiny ? 34 : (isCompact ? 38 : 42),
+        height: isTiny ? 34 : (isCompact ? 38 : 42),
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          shape: BoxShape.circle,
+          border: Border.all(color: borderColor),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          shape: const CircleBorder(),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: onTap,
+            child: Center(
+              child: Icon(
+                icon,
+                color: Colors.white,
+                size: isTiny ? 17 : (isCompact ? 19 : 20),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
