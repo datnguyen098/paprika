@@ -13,6 +13,7 @@ import '../l10n/generated/app_localizations.dart';
 import '../providers/providers.dart';
 import '../widgets/bottom_nav_bar.dart';
 import '../widgets/coming_soon.dart';
+import '../widgets/contact_actions.dart';
 import '../widgets/paprika_footer.dart';
 import '../widgets/paprika_header.dart';
 import '../widgets/page_transition_loader.dart';
@@ -1730,8 +1731,7 @@ class _BranchMapCard extends StatelessWidget {
                     Expanded(
                       child: FilledButton.icon(
                         onPressed: () {
-                          context.showPageLoader();
-                          context.push(AppRoutes.branchDetailPath(branch.id));
+                          launchBranchDirections(context, branch);
                         },
                         icon: const Icon(Icons.arrow_forward, size: 16),
                         label: Text(text.directions),
@@ -1750,10 +1750,7 @@ class _BranchMapCard extends StatelessWidget {
                     if (phone.isNotEmpty) ...[
                       const SizedBox(width: 10),
                       OutlinedButton(
-                        onPressed: () => ComingSoon.show(
-                          context,
-                          feature: text.callStore,
-                        ),
+                        onPressed: () => launchPhoneCall(context, phone),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: AppColors.primary,
                           side: const BorderSide(color: Color(0xFFE7E5E4)),
@@ -1827,28 +1824,26 @@ class _BranchMapPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasMap = (branch.mapEmbedSrc ?? '').isNotEmpty ||
-        (branch.latitude != null && branch.longitude != null);
+    final mapImageUrl = branch.staticMapImageUrl();
+    final hasMap = mapImageUrl != null || (branch.mapEmbedSrc ?? '').isNotEmpty;
     final text = _BranchMapText.of(context);
 
     return Stack(
       fit: StackFit.expand,
       children: [
+        _StaticMapBackground(imageUrl: mapImageUrl),
         DecoratedBox(
           decoration: BoxDecoration(
-            color: const Color(0xFFDDE9EF),
-            backgroundBlendMode: BlendMode.multiply,
             gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
               colors: [
-                const Color(0xFFBFE3EC).withValues(alpha: 0.9),
-                const Color(0xFFF3EFE6).withValues(alpha: 0.95),
+                Colors.transparent,
+                Colors.black.withValues(alpha: 0.08),
               ],
             ),
           ),
         ),
-        CustomPaint(painter: _MapGridPainter()),
         Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -1905,8 +1900,7 @@ class _BranchMapPreview extends StatelessWidget {
           bottom: 12,
           child: FilledButton.icon(
             onPressed: () {
-              context.showPageLoader();
-              context.push(AppRoutes.branchDetailPath(branch.id));
+              launchBranchMap(context, branch);
             },
             icon: const Icon(Icons.map_outlined, size: 16),
             label: Text(text.openMap),
@@ -1917,6 +1911,56 @@ class _BranchMapPreview extends StatelessWidget {
             ),
           ),
         ),
+      ],
+    );
+  }
+}
+
+class _StaticMapBackground extends StatelessWidget {
+  const _StaticMapBackground({required this.imageUrl});
+
+  final String? imageUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    final url = imageUrl;
+    if (url == null || url.isEmpty) return const _FallbackMapBackground();
+
+    return Image.network(
+      url,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => const _FallbackMapBackground(),
+      loadingBuilder: (context, child, progress) {
+        if (progress == null) return child;
+        return const _FallbackMapBackground();
+      },
+    );
+  }
+}
+
+class _FallbackMapBackground extends StatelessWidget {
+  const _FallbackMapBackground();
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        DecoratedBox(
+          decoration: BoxDecoration(
+            color: const Color(0xFFDDE9EF),
+            backgroundBlendMode: BlendMode.multiply,
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                const Color(0xFFBFE3EC).withValues(alpha: 0.9),
+                const Color(0xFFF3EFE6).withValues(alpha: 0.95),
+              ],
+            ),
+          ),
+        ),
+        CustomPaint(painter: _MapGridPainter()),
       ],
     );
   }
@@ -2289,14 +2333,15 @@ class _Pill extends StatelessWidget {
 // ===========================================================================
 // FLOATING CONTACT BUTTONS — phone (đỏ) + chat (xanh) góc dưới phải
 // (giống Laravel chat-widget + hotline button trong screenshot).
-// Chỉ là UI — logic gọi/chat vẫn dùng ComingSoon như cart.
 // ===========================================================================
-class _FloatingContactButtons extends StatelessWidget {
+class _FloatingContactButtons extends ConsumerWidget {
   const _FloatingContactButtons();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
+    final branch = _preferredContactBranch(ref);
+    final phone = branch?.displayHotline;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -2305,8 +2350,7 @@ class _FloatingContactButtons extends StatelessWidget {
           heroTag: 'fab-call',
           mini: true,
           backgroundColor: AppColors.accent,
-          onPressed: () =>
-              ComingSoon.show(context, feature: l.fabCallFeature),
+          onPressed: () => launchPhoneCall(context, phone),
           tooltip: l.fabCallTooltip,
           child: const Icon(Icons.phone, color: Colors.white, size: 22),
         ),
@@ -2315,11 +2359,25 @@ class _FloatingContactButtons extends StatelessWidget {
           heroTag: 'fab-chat',
           mini: true,
           backgroundColor: AppColors.primary,
-          onPressed: () => ComingSoon.show(context, feature: l.fabChatFeature),
+          onPressed: () => openChatSupport(context, branchId: branch?.id),
           tooltip: l.fabChatTooltip,
           child: const Icon(Icons.chat_bubble, color: Colors.white, size: 20),
         ),
       ],
     );
+  }
+
+  Branch? _preferredContactBranch(WidgetRef ref) {
+    final branches = ref.watch(branchesProvider).asData?.value;
+    if (branches == null || branches.isEmpty) return null;
+
+    final activeBranchId = ref.watch(storageServiceProvider).getActiveBranchId();
+    if (activeBranchId != null) {
+      for (final branch in branches) {
+        if (branch.id == activeBranchId) return branch;
+      }
+    }
+
+    return branches.first;
   }
 }

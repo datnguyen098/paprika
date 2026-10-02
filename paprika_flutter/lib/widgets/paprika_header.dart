@@ -7,6 +7,7 @@ import '../core/constants/app_colors.dart';
 import '../core/constants/app_constants.dart';
 import '../core/config/locales.dart';
 import '../core/i18n/locale_controller.dart';
+import '../core/i18n/ui_text.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../providers/providers.dart';
 import 'cart_drawer.dart';
@@ -53,13 +54,38 @@ class _PaprikaHeaderState extends ConsumerState<PaprikaHeader> {
 
   /// Build nav items list từ AppLocalizations.
   /// Phải là method (không const) vì phụ thuộc locale hiện tại.
-  List<_NavItem> _buildNavItems(AppLocalizations l) => <_NavItem>[
+  List<_NavItem> _buildNavItems(AppLocalizations l, UiText t) => <_NavItem>[
     _NavItem(label: l.navHome, route: AppRoutes.home),
     _NavItem(label: l.navMenu, route: AppRoutes.menu),
+    _NavItem(
+      label: t.blog,
+      route: AppRoutes.blog,
+      icon: Icons.article_outlined,
+    ),
+    _NavItem(
+      label: t.gallery,
+      route: AppRoutes.gallery,
+      icon: Icons.photo_library_outlined,
+    ),
+    _NavItem(
+      label: t.pages,
+      route: AppRoutes.pages,
+      icon: Icons.description_outlined,
+    ),
+    _NavItem(
+      label: t.vouchers,
+      route: AppRoutes.vouchers,
+      icon: Icons.local_offer_outlined,
+    ),
     _NavItem(label: l.navAbout, route: AppRoutes.about, icon: Icons.info_outline),
     _NavItem(label: l.navBranches, route: AppRoutes.branches, icon: Icons.storefront_outlined),
     _NavItem(label: l.navContact, route: AppRoutes.contact, icon: Icons.contact_mail_outlined),
-    _NavItem(label: l.navReservation, route: AppRoutes.reservation),
+    _NavItem(
+      label: t.allergens,
+      route: AppRoutes.allergenSettings,
+      icon: Icons.health_and_safety_outlined,
+    ),
+    _NavItem(label: l.footerLinkOrderLookup, route: AppRoutes.orders, icon: Icons.manage_search_outlined),
   ];
 
   String get _currentRoute {
@@ -78,9 +104,17 @@ class _PaprikaHeaderState extends ConsumerState<PaprikaHeader> {
         route == AppRoutes.branches ||
         route == AppRoutes.contact ||
         route == AppRoutes.menu ||
+        route == AppRoutes.search ||
+        route == AppRoutes.blog ||
+        route == AppRoutes.gallery ||
+        route == AppRoutes.pages ||
+        route == AppRoutes.vouchers ||
         route == AppRoutes.cart ||
         route == AppRoutes.checkout ||
-        route == AppRoutes.reservation) {
+        route == AppRoutes.reservation ||
+        route == AppRoutes.reservations ||
+        route == AppRoutes.orders ||
+        route == AppRoutes.allergenSettings) {
       context.showPageLoader();
       context.go(route);
       return;
@@ -154,24 +188,30 @@ class _PaprikaHeaderState extends ConsumerState<PaprikaHeader> {
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final isWide = constraints.maxWidth >= 768;
+          final isWide = constraints.maxWidth >= 1040;
+          const showWordmark = true;
+          const showLanguage = true;
           return Row(
             children: [
-              _buildLogo(context),
+              _buildLogo(context, showWordmark: showWordmark),
               if (isWide) ...[
-                const SizedBox(width: AppConstants.spaceLg),
-                Expanded(child: _buildDesktopNav(context)),
                 const SizedBox(width: AppConstants.spaceMd),
+                Expanded(child: _buildDesktopNav(context)),
+                const SizedBox(width: AppConstants.spaceSm),
                 _buildLanguageSelector(context),
                 const SizedBox(width: AppConstants.spaceXs),
               ] else ...[
                 const Spacer(),
-                _buildLanguageSelector(context),
-                const SizedBox(width: AppConstants.spaceXs),
+                if (showLanguage) ...[
+                  _buildLanguageSelector(context),
+                  const SizedBox(width: AppConstants.spaceXs),
+                ],
               ],
-              _buildCartIcon(context, showBooking: isWide),
-              SizedBox(width: isTiny ? 2 : AppConstants.spaceXs),
-              _buildMobileToggle(context),
+              _buildHeaderActions(context, showBooking: isWide),
+              if (!isWide) ...[
+                SizedBox(width: isTiny ? 2 : AppConstants.spaceXs),
+                _buildMobileToggle(context),
+              ],
             ],
           );
         },
@@ -183,7 +223,7 @@ class _PaprikaHeaderState extends ConsumerState<PaprikaHeader> {
     final width = MediaQuery.sizeOf(context).width;
     final isTiny = width < 320;
     final isCompact = width < 380;
-    final logoSize = isTiny ? 38.0 : (isCompact ? 42.0 : 48.0);
+    final logoSize = isTiny ? 34.0 : (isCompact ? 38.0 : 48.0);
     return InkWell(
       onTap: () => _go(context, AppRoutes.home),
       borderRadius: BorderRadius.circular(8),
@@ -218,19 +258,19 @@ class _PaprikaHeaderState extends ConsumerState<PaprikaHeader> {
             ),
           ),
           if (showWordmark) ...[
-            SizedBox(width: isTiny ? 6 : 10),
+            SizedBox(width: isTiny ? 4 : 8),
             // Wordmark - ảnh "Paprika" viết tay (h-8 mobile, h-9 desktop như PHP)
             Builder(
               builder: (context) {
                 final isDesktop = width >= 768;
                 final maxWordmarkWidth =
-                    isTiny ? 58.0 : (isCompact ? 82.0 : 118.0);
+                    isTiny ? 44.0 : (isCompact ? 66.0 : 118.0);
                 return ConstrainedBox(
                   constraints: BoxConstraints(
                     maxWidth: isDesktop ? 180 : maxWordmarkWidth,
                   ),
                   child: SizedBox(
-                    height: isDesktop ? 36 : (isTiny ? 26 : 32),
+                    height: isDesktop ? 36 : (isTiny ? 22 : 28),
                     child: Image.asset(
                       AppConstants.wordmark,
                       fit: BoxFit.contain,
@@ -248,18 +288,20 @@ class _PaprikaHeaderState extends ConsumerState<PaprikaHeader> {
 
   Widget _buildDesktopNav(BuildContext context) {
     final current = _currentRoute;
-    final navItems = _buildNavItems(AppLocalizations.of(context));
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+    final navItems = _buildNavItems(AppLocalizations.of(context), UiText.of(context));
+    return Wrap(
+      alignment: WrapAlignment.center,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 2,
+      runSpacing: 2,
       children: [
-        for (final item in navItems) ...[
+        for (final item in navItems)
           _NavLink(
             label: item.label,
             icon: item.icon,
             isActive: _isActive(current, item.route),
             onTap: () => _go(context, item.route),
           ),
-        ],
       ],
     );
   }
@@ -364,13 +406,25 @@ class _PaprikaHeaderState extends ConsumerState<PaprikaHeader> {
     );
   }
 
-  Widget _buildCartIcon(BuildContext context, {bool showBooking = true}) {
+  Widget _buildHeaderActions(BuildContext context, {bool showBooking = true}) {
     final l = AppLocalizations.of(context);
     final watchedCount = ref.watch(cartCountProvider);
     final count = watchedCount > 0 ? watchedCount : widget.cartItemsCount;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
+        _HeaderCircleAction(
+          tooltip: 'Tìm kiếm',
+          icon: Icons.search,
+          backgroundColor: Colors.white.withValues(alpha: 0.15),
+          borderColor: Colors.white24,
+          onTap: () => _go(context, AppRoutes.search),
+        ),
+        SizedBox(
+          width: MediaQuery.sizeOf(context).width < 320
+              ? 4
+              : AppConstants.spaceXs,
+        ),
         if (showBooking) ...[
           _HeaderCircleAction(
             tooltip: l.navReservation,
@@ -379,7 +433,11 @@ class _PaprikaHeaderState extends ConsumerState<PaprikaHeader> {
             borderColor: Colors.white24,
             onTap: () => _go(context, AppRoutes.reservation),
           ),
-          const SizedBox(width: AppConstants.spaceXs),
+          SizedBox(
+            width: MediaQuery.sizeOf(context).width < 320
+                ? 4
+                : AppConstants.spaceXs,
+          ),
         ],
         Stack(
           clipBehavior: Clip.none,
@@ -431,26 +489,27 @@ class _PaprikaHeaderState extends ConsumerState<PaprikaHeader> {
 
   Widget _buildMobileToggle(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final isTiny = MediaQuery.sizeOf(context).width < 320;
     final isCompact = MediaQuery.sizeOf(context).width < 380;
     return IconButton(
       tooltip: _isMobileMenuOpen ? l.commonClose : l.navMenu,
       onPressed: () => setState(() => _isMobileMenuOpen = !_isMobileMenuOpen),
       constraints: BoxConstraints.tightFor(
-        width: isCompact ? 36 : 42,
-        height: isCompact ? 36 : 42,
+        width: isTiny ? 32 : (isCompact ? 34 : 42),
+        height: isTiny ? 32 : (isCompact ? 34 : 42),
       ),
       padding: EdgeInsets.zero,
       icon: Icon(
         _isMobileMenuOpen ? Icons.close : Icons.menu,
         color: Colors.white,
-        size: isCompact ? 22 : 24,
+        size: isTiny ? 20 : (isCompact ? 21 : 24),
       ),
     );
   }
 
   Widget _buildMobileMenu() {
     final current = _currentRoute;
-    final navItems = _buildNavItems(AppLocalizations.of(context));
+    final navItems = _buildNavItems(AppLocalizations.of(context), UiText.of(context));
     return Container(
       width: double.infinity,
       decoration: const BoxDecoration(
@@ -508,8 +567,8 @@ class _HeaderCircleAction extends StatelessWidget {
     return Tooltip(
       message: tooltip,
       child: Container(
-        width: isTiny ? 34 : (isCompact ? 38 : 42),
-        height: isTiny ? 34 : (isCompact ? 38 : 42),
+        width: isTiny ? 30 : (isCompact ? 34 : 42),
+        height: isTiny ? 30 : (isCompact ? 34 : 42),
         decoration: BoxDecoration(
           color: backgroundColor,
           shape: BoxShape.circle,
@@ -566,8 +625,8 @@ class _NavLink extends StatelessWidget {
         foregroundColor:
             isActive ? Colors.white : Colors.white.withValues(alpha: 0.8),
         padding: const EdgeInsets.symmetric(
-          horizontal: AppConstants.spaceMd,
-          vertical: AppConstants.spaceSm,
+          horizontal: 10,
+          vertical: 8,
         ),
         minimumSize: const Size(0, AppConstants.minTouchTarget),
         shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
@@ -593,7 +652,7 @@ class _NavLink extends StatelessWidget {
           Text(
             label.toUpperCase(),
             style: const TextStyle(
-              fontSize: 11,
+              fontSize: 10,
               fontWeight: FontWeight.w800,
               letterSpacing: 0.14,
             ),

@@ -1,39 +1,44 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../app/routes.dart';
 import '../core/constants/app_colors.dart';
+import '../core/i18n/ui_text.dart';
+import '../providers/providers.dart';
 
 /// Screen for managing user's allergen preferences
-class AllergenSettingsScreen extends StatefulWidget {
+class AllergenSettingsScreen extends ConsumerStatefulWidget {
   const AllergenSettingsScreen({super.key});
 
   @override
-  State<AllergenSettingsScreen> createState() => _AllergenSettingsScreenState();
+  ConsumerState<AllergenSettingsScreen> createState() =>
+      _AllergenSettingsScreenState();
 }
 
-class _AllergenSettingsScreenState extends State<AllergenSettingsScreen> {
-  static const String _prefsKey = 'user_allergens';
-
+class _AllergenSettingsScreenState
+    extends ConsumerState<AllergenSettingsScreen> {
   // Complete list of common allergens (EU regulation 1169/2011)
   static const List<_AllergenOption> _allAllergens = [
-    _AllergenOption(key: 'gluten', label: 'Gluten'),
-    _AllergenOption(key: 'dairy', label: 'Sữa'),
-    _AllergenOption(key: 'egg', label: 'Trứng'),
-    _AllergenOption(key: 'soy', label: 'Đậu nành'),
-    _AllergenOption(key: 'sesame', label: 'Mè'),
-    _AllergenOption(key: 'mustard', label: 'Mù tạt'),
-    _AllergenOption(key: 'seafood', label: 'Hải sản'),
-    _AllergenOption(key: 'fish', label: 'Cá'),
-    _AllergenOption(key: 'peanut', label: 'Đậu phộng'),
-    _AllergenOption(key: 'tree_nuts', label: 'Hạt cây'),
-    _AllergenOption(key: 'sulphites', label: 'Lưu huỳnh'),
-    _AllergenOption(key: 'celery', label: 'Cần tây'),
-    _AllergenOption(key: 'molluscs', label: 'Động vật thân mềm'),
-    _AllergenOption(key: 'lupin', label: 'Lupin'),
+    _AllergenOption(key: 'gluten'),
+    _AllergenOption(key: 'dairy'),
+    _AllergenOption(key: 'egg'),
+    _AllergenOption(key: 'soy'),
+    _AllergenOption(key: 'sesame'),
+    _AllergenOption(key: 'mustard'),
+    _AllergenOption(key: 'seafood'),
+    _AllergenOption(key: 'fish'),
+    _AllergenOption(key: 'peanut'),
+    _AllergenOption(key: 'tree_nuts'),
+    _AllergenOption(key: 'sulphites'),
+    _AllergenOption(key: 'celery'),
+    _AllergenOption(key: 'molluscs'),
+    _AllergenOption(key: 'lupin'),
   ];
 
   final Set<String> _selectedAllergens = {};
   bool _isLoading = true;
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -42,32 +47,45 @@ class _AllergenSettingsScreenState extends State<AllergenSettingsScreen> {
   }
 
   Future<void> _loadPreferences() async {
-    final prefs = await SharedPreferences.getInstance();
-    final saved = prefs.getStringList(_prefsKey) ?? [];
+    final storage = ref.read(storageServiceProvider);
+    final saved = storage.getUserAllergens();
     final normalized = saved
         .map(_allergenKeyForSavedValue)
         .where((key) => key.isNotEmpty)
         .toSet();
     if (normalized.length != saved.length ||
         normalized.any((key) => !saved.contains(key))) {
-      await prefs.setStringList(_prefsKey, normalized.toList());
+      await storage.setUserAllergens(normalized);
     }
     if (!mounted) return;
     setState(() {
+      _selectedAllergens.clear();
       _selectedAllergens.addAll(normalized);
       _isLoading = false;
     });
   }
 
   Future<void> _savePreferences() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(_prefsKey, _selectedAllergens.toList());
+    if (_isSaving) return;
+    setState(() => _isSaving = true);
+
+    try {
+      await ref
+          .read(storageServiceProvider)
+          .setUserAllergens(_selectedAllergens);
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
 
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Đã lưu thông tin dị ứng'),
-        duration: Duration(seconds: 2),
+      SnackBar(
+        content: Text(
+          _selectedAllergens.isEmpty
+              ? UiText.of(context).allergensCleared
+              : UiText.of(context).allergensSaved(_selectedAllergens.length),
+        ),
+        duration: const Duration(seconds: 2),
       ),
     );
   }
@@ -122,10 +140,16 @@ class _AllergenSettingsScreenState extends State<AllergenSettingsScreen> {
   }
 
   String _labelForKey(String key) {
-    for (final allergen in _allAllergens) {
-      if (allergen.key == key) return allergen.label;
+    return UiText.of(context).allergenLabel(key);
+  }
+
+  void _goBack() {
+    if (context.canPop()) {
+      context.pop();
+      return;
     }
-    return key;
+
+    context.go(AppRoutes.menu);
   }
 
   @override
@@ -135,29 +159,38 @@ class _AllergenSettingsScreenState extends State<AllergenSettingsScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.surface,
         elevation: 0,
+        titleSpacing: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.primary),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: _goBack,
         ),
-        title: const Text(
-          'Quản lý dị ứng',
-          style: TextStyle(
+        title: Text(
+          UiText.of(context).allergenTitle,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
             color: AppColors.textPrimary,
-            fontSize: 18,
+            fontSize: 16,
             fontWeight: FontWeight.w700,
           ),
         ),
         actions: [
           TextButton(
-            onPressed: _savePreferences,
-            child: const Text(
-              'Lưu',
-              style: TextStyle(
-                color: AppColors.accent,
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
+            onPressed: _isLoading || _isSaving ? null : _savePreferences,
+            child: _isSaving
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Text(
+                    UiText.of(context).save,
+                    style: const TextStyle(
+                      color: AppColors.accent,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
           ),
         ],
       ),
@@ -178,23 +211,27 @@ class _AllergenSettingsScreenState extends State<AllergenSettingsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
-                        children: const [
-                          Icon(Icons.info_outline, color: AppColors.primary, size: 20),
-                          SizedBox(width: 8),
-                          Text(
-                            'Chọn các loại thực phẩm bạn dị ứng',
-                            style: TextStyle(
-                              color: AppColors.textPrimary,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
+                        children: [
+                          const Icon(Icons.info_outline, color: AppColors.primary, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              UiText.of(context).allergenIntroTitle,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 8),
-                      const Text(
-                        'Chúng tôi sẽ tự động cảnh báo khi món ăn có chứa các chất gây dị ứng bạn đã chọn.',
-                        style: TextStyle(
+                      Text(
+                        UiText.of(context).allergenIntroBody,
+                        style: const TextStyle(
                           color: AppColors.textMuted,
                           fontSize: 13,
                           height: 1.5,
@@ -256,14 +293,18 @@ class _AllergenSettingsScreenState extends State<AllergenSettingsScreen> {
                                     : null,
                               ),
                               const SizedBox(width: 12),
-                              Text(
-                                allergen.label,
-                                style: TextStyle(
-                                  color: isSelected 
-                                      ? AppColors.accentStrong
-                                      : AppColors.textPrimary,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700,
+                              Expanded(
+                                child: Text(
+                                  UiText.of(context).allergenLabel(allergen.key),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: isSelected
+                                        ? AppColors.accentStrong
+                                        : AppColors.textPrimary,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                  ),
                                 ),
                               ),
                             ],
@@ -289,7 +330,7 @@ class _AllergenSettingsScreenState extends State<AllergenSettingsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Đã chọn ${_selectedAllergens.length} loại dị ứng',
+                          UiText.of(context).allergensSelected(_selectedAllergens.length),
                           style: const TextStyle(
                             color: AppColors.textPrimary,
                             fontSize: 14,
@@ -333,9 +374,7 @@ class _AllergenSettingsScreenState extends State<AllergenSettingsScreen> {
 class _AllergenOption {
   const _AllergenOption({
     required this.key,
-    required this.label,
   });
 
   final String key;
-  final String label;
 }

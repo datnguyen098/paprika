@@ -10,6 +10,7 @@ import '../data/models/branch_model.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../providers/providers.dart';
 import '../widgets/bottom_nav_bar.dart';
+import '../widgets/contact_actions.dart';
 import '../widgets/paprika_footer.dart';
 import '../widgets/paprika_header.dart';
 import '../widgets/page_transition_loader.dart';
@@ -214,7 +215,7 @@ class _BranchContent extends StatelessWidget {
                 children: [
                   Expanded(
                     child: ElevatedButton.icon(
-                      onPressed: () {},
+                      onPressed: () => launchPhoneCall(context, b.displayHotline),
                       icon: const Icon(Icons.phone, size: 18),
                       label: Text(l.branchDetailCall),
                     ),
@@ -222,7 +223,7 @@ class _BranchContent extends StatelessWidget {
                   const SizedBox(width: AppConstants.spaceSm),
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: () {},
+                      onPressed: () => launchBranchDirections(context, b),
                       icon: const Icon(Icons.directions, size: 18),
                       label: Text(l.branchDetailDirections),
                     ),
@@ -307,7 +308,7 @@ class _BranchContent extends StatelessWidget {
               ],
 
               // Map
-              if ((b.googleMapIframe ?? '').isNotEmpty) ...[
+              if ((b.googleMapIframe ?? '').isNotEmpty || b.hasMapLocation) ...[
                 const SizedBox(height: AppConstants.spaceLg),
                 _SectionHeader(title: l.branchDetailMap),
                 const SizedBox(height: AppConstants.spaceSm),
@@ -319,7 +320,7 @@ class _BranchContent extends StatelessWidget {
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(AppConstants.radius),
-                    child: _MapWidget(url: b.mapEmbedSrc ?? ''),
+                    child: _MapWidget(branch: b),
                   ),
                 ),
               ],
@@ -341,28 +342,34 @@ class _BranchContent extends StatelessWidget {
       b.deliveryMaxDistanceKm != null;
 }
 
-/// Map widget đơn giản — hiển thị Google Maps URL từ BE.
-/// Hiện tại dùng button "Mở bản đồ" để launch URL trong browser.
-/// Thay bằng url_launcher hoặc webview_flutter khi cần.
+/// Map preview đơn giản, nút "Mở bản đồ" sẽ mở Google Maps bên ngoài app.
 class _MapWidget extends StatelessWidget {
-  const _MapWidget({required this.url});
-  final String url;
+  const _MapWidget({required this.branch});
+  final Branch branch;
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    if (url.isEmpty) {
+    final mapImageUrl = branch.staticMapImageUrl(width: 900, height: 420);
+    if (mapImageUrl == null && !branch.hasMapLocation) {
       return Container(
         color: AppColors.warm,
         child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.map_outlined, size: 40, color: AppColors.textMuted),
+              const Icon(
+                Icons.map_outlined,
+                size: 40,
+                color: AppColors.textMuted,
+              ),
               const SizedBox(height: 8),
               Text(
                 l.branchDetailMapUnavailable,
-                style: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+                style: const TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 13,
+                ),
               ),
             ],
           ),
@@ -370,37 +377,29 @@ class _MapWidget extends StatelessWidget {
       );
     }
 
-    // Nếu url bắt đầu bằng iframe src URL thực sự
-    final decoded = Uri.decodeComponent(url);
     return Stack(
+      fit: StackFit.expand,
       children: [
-        // Placeholder — thay bằng webview_flutter khi cần
-        Container(
-          color: AppColors.warm,
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.map, size: 40, color: AppColors.primary),
-                const SizedBox(height: 8),
-                Text(
-                  l.branchDetailMap,
-                  style: const TextStyle(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  decoded,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: AppColors.textMuted,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+        _DetailStaticMapBackground(imageUrl: mapImageUrl),
+        Center(
+          child: Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: AppColors.accent,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.accent.withValues(alpha: 0.25),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
                 ),
               ],
+            ),
+            child: const Icon(
+              Icons.location_on,
+              color: Colors.white,
+              size: 29,
             ),
           ),
         ),
@@ -408,15 +407,7 @@ class _MapWidget extends StatelessWidget {
           right: 8,
           bottom: 8,
           child: ElevatedButton.icon(
-            onPressed: () {
-              // TODO: dùng url_launcher để mở map
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(l.branchDetailMapOpen),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            },
+            onPressed: () => launchBranchMap(context, branch),
             icon: const Icon(Icons.open_in_new, size: 14),
             label: Text(l.branchDetailMapOpen),
             style: ElevatedButton.styleFrom(
@@ -427,6 +418,56 @@ class _MapWidget extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _DetailStaticMapBackground extends StatelessWidget {
+  const _DetailStaticMapBackground({required this.imageUrl});
+
+  final String? imageUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    final url = imageUrl;
+    if (url == null || url.isEmpty) return const _DetailFallbackMap();
+
+    return Image.network(
+      url,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => const _DetailFallbackMap(),
+      loadingBuilder: (context, child, progress) {
+        if (progress == null) return child;
+        return const _DetailFallbackMap();
+      },
+    );
+  }
+}
+
+class _DetailFallbackMap extends StatelessWidget {
+  const _DetailFallbackMap();
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return Container(
+      color: AppColors.warm,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.map, size: 40, color: AppColors.primary),
+            const SizedBox(height: 8),
+            Text(
+              l.branchDetailMap,
+              style: const TextStyle(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -5,14 +5,24 @@ import '../screens/about_screen.dart';
 import '../screens/allergen_settings_screen.dart';
 import '../screens/branch_detail_screen.dart';
 import '../screens/branches_screen.dart';
+import '../screens/blog_screen.dart';
 import '../screens/cart_screen.dart';
 import '../screens/checkout_screen.dart';
 import '../screens/contact_screen.dart';
 import '../screens/dish_detail_screen.dart';
+import '../screens/gallery_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/menu_screen.dart';
+import '../screens/order_detail_screen.dart';
 import '../screens/order_success_screen.dart';
+import '../screens/orders_screen.dart';
+import '../screens/page_detail_screen.dart';
+import '../screens/pages_screen.dart';
+import '../screens/post_detail_screen.dart';
 import '../screens/reservation_screen.dart';
+import '../screens/reservations_screen.dart';
+import '../screens/search_screen.dart';
+import '../screens/vouchers_screen.dart';
 
 /// Dia nghĩa tat ca route name & path cua app.
 class AppRoutes {
@@ -25,8 +35,14 @@ class AppRoutes {
   static const String menu = '/menu';
   static const String dishDetail = '/dish/:id';
   static const String search = '/search';
+  static const String blog = '/blog';
+  static const String blogDetail = '/blog/:slug';
+  static const String gallery = '/gallery';
+  static const String pages = '/pages';
+  static const String pageDetail = '/pages/:slug';
   static const String cart = '/cart';
   static const String checkout = '/checkout';
+  static const String vouchers = '/vouchers';
   static const String orderSuccess = '/order/success/:code';
   static const String orders = '/orders';
   static const String orderDetail = '/orders/:id';
@@ -48,9 +64,13 @@ class AppRoutes {
 
   // ==================== Helper builders ====================
   static String dishDetailPath(int id) => '/dish/$id';
+  static String blogDetailPath(String slug) =>
+      '/blog/${Uri.encodeComponent(slug)}';
+  static String pageDetailPath(String slug) =>
+      '/pages/${Uri.encodeComponent(slug)}';
   static String orderSuccessPath(String code) => '/order/success/$code';
-  static String orderDetailPath(int id) => '/orders/$id';
-  static String orderTrackingPath(int id) => '/orders/$id/track';
+  static String orderDetailPath(String code) => '/orders/$code';
+  static String orderTrackingPath(String code) => '/orders/$code/track';
   static String branchDetailPath(int id) => '/branches/$id';
 }
 
@@ -104,6 +124,48 @@ class AppRouter {
         builder: (context, state) => const CheckoutScreen(),
       ),
       GoRoute(
+        path: AppRoutes.vouchers,
+        builder: (context, state) => const VouchersScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.search,
+        builder: (context, state) => SearchScreen(
+          initialQuery: state.uri.queryParameters['q'] ?? '',
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.blog,
+        builder: (context, state) => const BlogScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.blogDetail,
+        builder: (context, state) {
+          final slug = state.pathParameters['slug'] ?? '';
+          if (slug.isEmpty) {
+            return const _ErrorScreen(error: 'Slug bài viết không hợp lệ');
+          }
+          return PostDetailScreen(slug: slug);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.gallery,
+        builder: (context, state) => const GalleryScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.pages,
+        builder: (context, state) => const PagesScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.pageDetail,
+        builder: (context, state) {
+          final slug = state.pathParameters['slug'] ?? '';
+          if (slug.isEmpty) {
+            return const _ErrorScreen(error: 'Slug trang không hợp lệ');
+          }
+          return PageDetailScreen(slug: slug);
+        },
+      ),
+      GoRoute(
         path: AppRoutes.orderSuccess,
         builder: (context, state) {
           final code = state.pathParameters['code'] ?? '';
@@ -114,10 +176,38 @@ class AppRouter {
           );
         },
       ),
+      GoRoute(
+        path: AppRoutes.orders,
+        builder: (context, state) => const OrdersScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.orderDetail,
+        builder: (context, state) {
+          final code = state.pathParameters['id'] ?? '';
+          if (code.isEmpty) {
+            return const _ErrorScreen(error: 'Mã đơn không hợp lệ');
+          }
+          return OrderDetailScreen(code: code);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.orderTracking,
+        builder: (context, state) {
+          final code = state.pathParameters['id'] ?? '';
+          if (code.isEmpty) {
+            return const _ErrorScreen(error: 'Mã đơn không hợp lệ');
+          }
+          return OrderDetailScreen(code: code, trackingOnly: true);
+        },
+      ),
       // Reservation — đặt bàn, có form + quick actions
       GoRoute(
         path: AppRoutes.reservation,
         builder: (context, state) => const ReservationScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.reservations,
+        builder: (context, state) => const ReservationsScreen(),
       ),
 
       // Gioi thieu

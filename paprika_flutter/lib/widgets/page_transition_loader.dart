@@ -377,13 +377,13 @@ class _PageTransitionLoaderState extends State<PageTransitionLoader>
         Text(
           _message.toUpperCase(),
           textAlign: TextAlign.center,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
+          maxLines: 2,
+          overflow: TextOverflow.visible,
           style: const TextStyle(
             color: Color(0xFF667132),
-            fontSize: 12, // 0.75rem
+            fontSize: 10.5,
             fontWeight: FontWeight.w900,
-            letterSpacing: 2.56, // 0.16em * 16 (CSS rem base) -> scaled
+            letterSpacing: 1.5,
             height: 1.3,
           ),
         ),
@@ -471,7 +471,7 @@ class _PageTransitionLoaderState extends State<PageTransitionLoader>
       case 'el':
         return 'Ετοιμάζουμε την επόμενη σελίδα...';
       default:
-        return 'Đang chuẩn bị trang tiếp theo...';
+        return 'Đang chuẩn bị trang';
     }
   }
 }
