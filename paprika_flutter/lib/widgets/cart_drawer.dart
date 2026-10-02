@@ -12,6 +12,8 @@ import '../providers/providers.dart';
 import 'page_transition_loader.dart';
 
 Future<void> showCartDrawer(BuildContext context) {
+  FocusManager.instance.primaryFocus?.unfocus();
+
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -29,61 +31,71 @@ class CartDrawer extends ConsumerWidget {
     final cart = ref.watch(cartProvider);
     final height = MediaQuery.sizeOf(context).height;
 
-    return Align(
-      alignment: Alignment.bottomCenter,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxHeight: height * 0.9),
-        child: Material(
-          color: AppColors.cream,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const _DrawerHandle(),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 4, 10, 12),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.shopping_bag_outlined,
-                      color: AppColors.primary,
-                      size: 22,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Giỏ hàng (${cart.count})',
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w900,
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+      child: Align(
+        alignment: Alignment.bottomCenter,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: height * 0.9),
+          child: Material(
+            color: AppColors.cream,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const _DrawerHandle(),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 10, 12),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.shopping_bag_outlined,
+                        color: AppColors.primary,
+                        size: 22,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Giỏ hàng (${cart.count})',
+                          style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                          ),
                         ),
                       ),
-                    ),
-                    IconButton(
-                      tooltip: AppLocalizations.of(context).commonClose,
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.close, color: AppColors.textMuted),
-                    ),
-                  ],
-                ),
-              ),
-              Flexible(
-                child: cart.isEmpty
-                    ? const _EmptyCart()
-                    : ListView.separated(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                        shrinkWrap: true,
-                        itemCount: cart.items.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 10),
-                        itemBuilder: (context, index) {
-                          return CartLineTile(item: cart.items[index]);
-                        },
+                      IconButton(
+                        tooltip: AppLocalizations.of(context).commonClose,
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: const Icon(
+                          Icons.close,
+                          color: AppColors.textMuted,
+                        ),
                       ),
-              ),
-              if (!cart.isEmpty) _CartDrawerFooter(cart: cart),
-            ],
+                    ],
+                  ),
+                ),
+                Flexible(
+                  child: cart.isEmpty
+                      ? const _EmptyCart()
+                      : ListView.separated(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                          shrinkWrap: true,
+                          keyboardDismissBehavior:
+                              ScrollViewKeyboardDismissBehavior.onDrag,
+                          itemCount: cart.items.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 10),
+                          itemBuilder: (context, index) {
+                            return CartLineTile(item: cart.items[index]);
+                          },
+                        ),
+                ),
+                if (!cart.isEmpty) _CartDrawerFooter(cart: cart),
+              ],
+            ),
           ),
         ),
       ),

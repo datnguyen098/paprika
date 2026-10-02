@@ -245,6 +245,88 @@ class ReservationWorkflowTest extends TestCase
         Mail::assertQueued(NewReservationNotificationMail::class, fn (NewReservationNotificationMail $mail): bool => $mail->hasTo('settings@example.com'));
     }
 
+    public function test_api_reservation_availability_returns_available_tables(): void
+    {
+        Carbon::setTestNow('2026-06-04 10:00:00');
+
+        $branch = $this->branch();
+
+        $this->getJson('/api/v1/reservations/availability?'.http_build_query([
+            'branch_id' => $branch->id,
+            'reservation_date' => now()->addDay()->toDateString(),
+            'reservation_time' => '18:00',
+            'guests' => 2,
+        ]))
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.available', true)
+            ->assertJsonStructure([
+                'data' => [
+                    'best_table_id',
+                    'tables' => [
+                        '*' => ['id', 'name', 'seats', 'available'],
+                    ],
+                ],
+            ]);
+    }
+
+    public function test_api_reservation_store_creates_flutter_reservation(): void
+    {
+        Carbon::setTestNow('2026-06-04 10:00:00');
+        Mail::fake();
+
+        $branch = $this->branch();
+
+        $this->postJson('/api/v1/reservations', [
+            'name' => 'Flutter Guest',
+            'phone' => '0901234567',
+            'email' => 'flutter@example.com',
+            'branch_id' => $branch->id,
+            'reservation_date' => now()->addDay()->toDateString(),
+            'reservation_time' => '18:00',
+            'guests' => 2,
+            'note' => 'Near window',
+        ])
+            ->assertCreated()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.status', 'pending')
+            ->assertJsonPath('data.branch.id', $branch->id);
+
+        $reservation = Reservation::where('email', 'flutter@example.com')->firstOrFail();
+        $this->assertSame('flutter', $reservation->source);
+        $this->assertNotNull($reservation->table_id);
+
+        Mail::assertQueued(CustomerReservationReceivedMail::class, fn (CustomerReservationReceivedMail $mail): bool => $mail->hasTo('flutter@example.com'));
+    }
+
+    public function test_api_reservation_lookup_returns_matching_reservations(): void
+    {
+        Carbon::setTestNow('2026-06-04 10:00:00');
+
+        $branch = $this->branch();
+        $reservation = $this->reservation($branch, 'Lookup Guest', now()->addDay()->toDateString(), [
+            'phone' => '+30 691 234 5678',
+            'email' => 'lookup@example.com',
+            'source' => 'flutter',
+        ]);
+
+        $this->getJson('/api/v1/reservations/lookup?query=Lookup@Example.com')
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.0.id', $reservation->id)
+            ->assertJsonPath('data.0.status', 'pending')
+            ->assertJsonPath('data.0.branch.id', $branch->id);
+
+        $this->getJson('/api/v1/reservations/lookup?query=306912345678')
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $reservation->id);
+
+        $this->getJson("/api/v1/reservations/{$reservation->id}")
+            ->assertOk()
+            ->assertJsonPath('data.id', $reservation->id)
+            ->assertJsonPath('data.email', 'lookup@example.com');
+    }
+
     public function test_export_route_downloads_filtered_reservations(): void
     {
         Carbon::setTestNow('2026-06-04 10:00:00');

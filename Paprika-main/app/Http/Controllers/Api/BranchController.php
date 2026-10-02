@@ -61,8 +61,12 @@ class BranchController extends Controller
             'hotline'       => $branch->hotline,
             'email'         => $branch->email,
             'opening_hours' => $branch->opening_hours,
-            'latitude'      => $branch->latitude !== null ? (float) $branch->latitude : null,
-            'longitude'     => $branch->longitude !== null ? (float) $branch->longitude : null,
+            'latitude'      => $branch->latitude !== null
+                ? (float) $branch->latitude
+                : ($branch->delivery_origin_latitude !== null ? (float) $branch->delivery_origin_latitude : null),
+            'longitude'     => $branch->longitude !== null
+                ? (float) $branch->longitude
+                : ($branch->delivery_origin_longitude !== null ? (float) $branch->delivery_origin_longitude : null),
             'image'         => $branch->image,
             'description'   => localized_field($branch, 'description', $branch->description),
             'is_active'     => (bool) $branch->is_active,

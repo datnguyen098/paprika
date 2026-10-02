@@ -1,9 +1,16 @@
 <?php
 
 use App\Http\Controllers\Api\CategoryController;
+use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\DishController;
+use App\Http\Controllers\Api\GalleryController;
 use App\Http\Controllers\Api\ImageController;
+use App\Http\Controllers\Api\NewsletterController;
 use App\Http\Controllers\Api\OrderController;
+use App\Http\Controllers\Api\PageController;
+use App\Http\Controllers\Api\PostController;
+use App\Http\Controllers\Api\ReservationController;
+use App\Http\Controllers\Api\VoucherController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -68,10 +75,67 @@ Route::prefix('v1')->group(function () {
     // About
     Route::get('/about', [\App\Http\Controllers\Api\AboutController::class, 'index']);
 
+    // Blog
+    Route::get('/posts', [PostController::class, 'index'])
+        ->middleware('throttle:30,1');
+    Route::get('/posts/{slug}', [PostController::class, 'show'])
+        ->middleware('throttle:30,1');
+
+    // Gallery
+    Route::get('/gallery', [GalleryController::class, 'index'])
+        ->middleware('throttle:30,1');
+
+    // CMS pages
+    Route::get('/pages', [PageController::class, 'index'])
+        ->middleware('throttle:30,1');
+    Route::get('/pages/{slug}', [PageController::class, 'show'])
+        ->middleware('throttle:30,1');
+
     // Contact
     Route::post('/contact', [\App\Http\Controllers\Api\ContactController::class, 'store']);
+    Route::post('/newsletter', [NewsletterController::class, 'store'])
+        ->middleware('throttle:6,1');
+
+    // Chat - Flutter live chat
+    Route::post('/chat/start', [ChatController::class, 'start'])
+        ->middleware('throttle:8,1');
+    Route::get('/chat/{chatSession}/messages', [ChatController::class, 'messages'])
+        ->middleware('throttle:30,1');
+    Route::post('/chat/{chatSession}/messages', [ChatController::class, 'send'])
+        ->middleware('throttle:20,1');
+
+    // Vouchers - public offers for Flutter checkout
+    Route::get('/vouchers', [VoucherController::class, 'index'])
+        ->middleware('throttle:30,1');
 
     // Orders - Flutter checkout offline
     Route::post('/orders', [OrderController::class, 'store']);
+    Route::post('/orders/delivery-quote', [OrderController::class, 'deliveryQuote'])
+        ->middleware('throttle:20,1');
+    Route::get('/orders/address-suggest', [OrderController::class, 'addressSuggest'])
+        ->middleware('throttle:20,1');
+    Route::post('/orders/address-reverse', [OrderController::class, 'addressReverse'])
+        ->middleware('throttle:20,1');
+    Route::post('/orders/availability', [OrderController::class, 'availability'])
+        ->middleware('throttle:30,1');
+    Route::post('/orders/voucher', [OrderController::class, 'voucherPreview'])
+        ->middleware('throttle:20,1');
+    Route::get('/orders/lookup', [OrderController::class, 'lookup'])
+        ->middleware('throttle:10,1');
+    Route::get('/orders/{order:code}', [OrderController::class, 'show'])
+        ->middleware('throttle:30,1');
+    Route::get('/orders/{order:code}/track', [OrderController::class, 'track'])
+        ->middleware('throttle:30,1');
+
+    // Reservations - Flutter booking flow
+    Route::get('/reservations/availability', [ReservationController::class, 'availability'])
+        ->middleware('throttle:30,1');
+    Route::get('/reservations/lookup', [ReservationController::class, 'lookup'])
+        ->middleware('throttle:10,1');
+    Route::get('/reservations/{reservation}', [ReservationController::class, 'show'])
+        ->whereNumber('reservation')
+        ->middleware('throttle:30,1');
+    Route::post('/reservations', [ReservationController::class, 'store'])
+        ->middleware('throttle:6,1');
 
 });

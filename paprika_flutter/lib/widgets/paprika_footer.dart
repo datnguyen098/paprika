@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../app/routes.dart';
 import '../core/constants/app_colors.dart';
 import '../core/constants/app_constants.dart';
+import '../core/i18n/ui_text.dart';
+import '../data/models/newsletter_model.dart';
 import '../l10n/generated/app_localizations.dart';
+import '../providers/providers.dart';
 import 'coming_soon.dart';
 
 /// Footer 4 cột theo Laravel Blade storefront (`footer.blade.php`).
@@ -245,12 +251,15 @@ class _ExploreCol extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    // Mỗi link có feature name riêng để snackbar "đang phát triển" gợi ý rõ hơn.
-    final links = <(String, String, String)>[
-      (l.navHome, '/home', ''), // empty = không show snackbar (đang ở đây)
-      (l.navMenu, '/menu', l.footerMenuFeature),
-      (l.navAbout, '/about', l.footerAboutFeature),
-      (l.navReservation, '/reservation', l.footerReservationFeature),
+    final t = UiText.of(context);
+    final links = <(String, String)>[
+      (l.navHome, AppRoutes.home),
+      (l.navMenu, AppRoutes.menu),
+      (t.blog, AppRoutes.blog),
+      (t.gallery, AppRoutes.gallery),
+      (t.pages, AppRoutes.pages),
+      (l.navAbout, AppRoutes.about),
+      (l.navReservation, AppRoutes.reservation),
     ];
 
     return Column(
@@ -258,13 +267,11 @@ class _ExploreCol extends StatelessWidget {
       children: [
         _SectionTitle(title: l.footerExplore),
         const SizedBox(height: AppConstants.spaceMd),
-        for (final (label, route, feature) in links) ...[
+        for (final (label, route) in links) ...[
           _FooterLink(
             label: label,
             route: route,
-            onTap: feature.isEmpty
-                ? null
-                : () => ComingSoon.show(context, feature: feature),
+            onTap: () => context.go(route),
           ),
           const SizedBox(height: AppConstants.spaceSm),
         ],
@@ -355,15 +362,16 @@ class _ServiceItem extends StatelessWidget {
   }
 }
 
-class _NewsletterCol extends StatefulWidget {
+class _NewsletterCol extends ConsumerStatefulWidget {
   const _NewsletterCol();
 
   @override
-  State<_NewsletterCol> createState() => _NewsletterColState();
+  ConsumerState<_NewsletterCol> createState() => _NewsletterColState();
 }
 
-class _NewsletterColState extends State<_NewsletterCol> {
+class _NewsletterColState extends ConsumerState<_NewsletterCol> {
   final _controller = TextEditingController();
+  bool _submitting = false;
 
   @override
   void dispose() {
@@ -371,10 +379,36 @@ class _NewsletterColState extends State<_NewsletterCol> {
     super.dispose();
   }
 
-  void _submit() {
-    // Newsletter endpoint chưa có trong BE - dùng snackbar "đang phát triển".
-    final l = AppLocalizations.of(context);
-    ComingSoon.show(context, feature: l.footerNewsletterFeature);
+  Future<void> _submit() async {
+    final email = _controller.text.trim();
+    final valid = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email);
+    if (!valid) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vui lòng nhập email hợp lệ.')),
+      );
+      return;
+    }
+
+    setState(() => _submitting = true);
+    try {
+      final response = await ref
+          .read(newsletterRepositoryProvider)
+          .subscribe(NewsletterRequest(email: email));
+      if (!mounted) return;
+      _controller.clear();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(response.message)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Không đăng ký nhận tin được. Vui lòng thử lại.'),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
   }
 
   @override
@@ -422,11 +456,22 @@ class _NewsletterColState extends State<_NewsletterCol> {
               borderSide: const BorderSide(color: AppColors.accent),
             ),
             suffixIcon: IconButton(
-              onPressed: _submit,
-              icon: const Icon(Icons.mail, color: AppColors.accent, size: 20),
+              onPressed: _submitting ? null : _submit,
+              icon: _submitting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.accent,
+                      ),
+                    )
+                  : const Icon(Icons.mail, color: AppColors.accent, size: 20),
             ),
           ),
-          onSubmitted: (_) => _submit(),
+          onSubmitted: (_) {
+            if (!_submitting) _submit();
+          },
         ),
       ],
     );
@@ -582,7 +627,7 @@ class _LegalLinks extends StatelessWidget {
           label: l.footerLinkOrderLookup,
           color: AppColors.accent,
           bold: true,
-          onTap: () => ComingSoon.show(context, feature: l.featureOrders),
+          onTap: () => context.go(AppRoutes.orders),
         ),
       ],
     );

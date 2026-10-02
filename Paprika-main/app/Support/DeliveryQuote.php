@@ -13,6 +13,7 @@ class DeliveryQuote
         public readonly bool $manualFee = false,
         public readonly ?string $source = null,
         public readonly ?string $messageKey = null,
+        public readonly array $messageParams = [],
     ) {}
 
     /**
@@ -43,7 +44,7 @@ class DeliveryQuote
     public function localizedMessage(?array $params = null): ?string
     {
         if ($this->messageKey) {
-            return __($this->messageKey, $params ?? []);
+            return __($this->messageKey, array_merge($this->messageParams, $params ?? []));
         }
 
         return $this->message;

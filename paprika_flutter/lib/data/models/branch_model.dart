@@ -82,6 +82,53 @@ class Branch extends Equatable {
   String get displayHotline =>
       (hotline != null && hotline!.isNotEmpty) ? hotline! : phone;
 
+  bool get hasMapLocation =>
+      (latitude != null && longitude != null) ||
+      address.trim().isNotEmpty ||
+      name.trim().isNotEmpty;
+
+  String get _mapQuery {
+    if (latitude != null && longitude != null) {
+      return '${latitude!.toStringAsFixed(7)},${longitude!.toStringAsFixed(7)}';
+    }
+
+    final parts = <String>[
+      if (name.trim().isNotEmpty) name.trim(),
+      if (address.trim().isNotEmpty) address.trim(),
+    ];
+    return parts.join(', ');
+  }
+
+  Uri get mapSearchUri => Uri.https(
+        'www.google.com',
+        '/maps/search/',
+        {'api': '1', 'query': _mapQuery},
+      );
+
+  Uri get mapDirectionsUri => Uri.https(
+        'www.google.com',
+        '/maps/dir/',
+        {'api': '1', 'destination': _mapQuery},
+      );
+
+  String? staticMapImageUrl({int width = 720, int height = 360, int zoom = 16}) {
+    final lat = latitude;
+    final lng = longitude;
+    if (lat == null || lng == null) return null;
+
+    final center = '${lat.toStringAsFixed(7)},${lng.toStringAsFixed(7)}';
+    return Uri.https(
+      'staticmap.openstreetmap.de',
+      '/staticmap.php',
+      {
+        'center': center,
+        'zoom': '$zoom',
+        'size': '${width}x$height',
+        'markers': '$center,red-pushpin',
+      },
+    ).toString();
+  }
+
   /// Open days hiển thị dạng ngắn (T2-CN) — parse từ "1,2,3,4,5,6,0"
   /// trong đó PHP lưu theo Carbon (1=T2...0=CN).
   String get openDaysShort {

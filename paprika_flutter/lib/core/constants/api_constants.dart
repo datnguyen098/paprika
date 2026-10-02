@@ -51,6 +51,17 @@ class ApiConstants {
   /// GET /api/v1/about — trả về story, mission, vision, team_members, stats.
   static const String about = '/about';
 
+  // ==================== Endpoints - Blog / Posts ====================
+  static const String posts = '/posts';
+  static String postDetail(String slug) => '/posts/$slug';
+
+  // ==================== Endpoints - CMS Pages ====================
+  static const String pages = '/pages';
+  static String pageDetail(String slug) => '/pages/$slug';
+
+  // ==================== Endpoints - Gallery ====================
+  static const String gallery = '/gallery';
+
   // ==================== Endpoints - Branches ====================
   /// GET /api/v1/branches — danh sách chi nhánh active.
   /// GET /api/v1/branches/{id} — chi tiết 1 chi nhánh.
@@ -60,6 +71,14 @@ class ApiConstants {
   // ==================== Endpoints - Contact ====================
   /// POST /api/v1/contact — gửi form liên hệ.
   static const String contact = '/contact';
+  static const String newsletter = '/newsletter';
+
+  // ==================== Endpoints - Chat ====================
+  static const String chatStart = '/chat/start';
+  static String chatMessages(String sessionId) => '/chat/$sessionId/messages';
+
+  // ==================== Endpoints - Vouchers ====================
+  static const String vouchers = '/vouchers';
 
   // ==================== Endpoints - Auth (định nghĩa sẵn, BE chưa có) ====================
   static const String authRegister = '/auth/register';
@@ -80,12 +99,21 @@ class ApiConstants {
 
   // ==================== Endpoints - Orders ====================
   static const String orders = '/orders';
-  static String orderDetail(int id) => '/orders/$id';
-  static String orderCancel(int id) => '/orders/$id/cancel';
-  static String orderTrack(int id) => '/orders/$id/track';
+  static const String orderDeliveryQuote = '/orders/delivery-quote';
+  static const String orderAddressSuggest = '/orders/address-suggest';
+  static const String orderAddressReverse = '/orders/address-reverse';
+  static const String orderAvailability = '/orders/availability';
+  static const String orderVoucher = '/orders/voucher';
+  static const String orderLookup = '/orders/lookup';
+  static String orderDetail(String code) => '/orders/$code';
+  static String orderCancel(String code) => '/orders/$code/cancel';
+  static String orderTrack(String code) => '/orders/$code/track';
 
   // ==================== Endpoints - Reservations ====================
   static const String reservations = '/reservations';
+  static const String reservationAvailability = '/reservations/availability';
+  static const String reservationLookup = '/reservations/lookup';
+  static String reservationDetail(int id) => '/reservations/$id';
 
   // ==================== Endpoints - Settings ====================
   static const String settings = '/settings';

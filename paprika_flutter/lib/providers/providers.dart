@@ -5,20 +5,34 @@ import '../core/i18n/locale_controller.dart';
 import '../data/models/about_model.dart';
 import '../data/models/branch_model.dart';
 import '../data/models/cart_model.dart';
+import '../data/models/chat_model.dart';
 import '../data/models/category_model.dart';
 import '../data/models/contact_model.dart';
 import '../data/models/dish_model.dart';
+import '../data/models/gallery_model.dart';
 import '../data/models/home_model.dart';
 import '../data/models/menu_response.dart';
+import '../data/models/newsletter_model.dart';
 import '../data/models/order_model.dart';
+import '../data/models/page_model.dart';
+import '../data/models/post_model.dart';
+import '../data/models/reservation_model.dart';
+import '../data/models/voucher_model.dart';
 import '../data/repositories/about_repository.dart';
 import '../data/repositories/branch_repository.dart';
 import '../data/repositories/cart_repository.dart';
+import '../data/repositories/chat_repository.dart';
 import '../data/repositories/category_repository.dart';
 import '../data/repositories/contact_repository.dart';
 import '../data/repositories/dish_repository.dart';
+import '../data/repositories/gallery_repository.dart';
 import '../data/repositories/home_repository.dart';
+import '../data/repositories/newsletter_repository.dart';
 import '../data/repositories/order_repository.dart';
+import '../data/repositories/page_repository.dart';
+import '../data/repositories/post_repository.dart';
+import '../data/repositories/reservation_repository.dart';
+import '../data/repositories/voucher_repository.dart';
 import '../services/api_service.dart';
 import '../services/storage_service.dart';
 
@@ -69,12 +83,43 @@ final contactRepositoryProvider = Provider<ContactRepository>((ref) {
   return ContactRepository(ref.watch(apiServiceProvider));
 });
 
+final newsletterRepositoryProvider = Provider<NewsletterRepository>((ref) {
+  return NewsletterRepository(ref.watch(apiServiceProvider));
+});
+
 final cartRepositoryProvider = Provider<CartRepository>((ref) {
   return CartRepository(ref.watch(sharedPrefsProvider));
 });
 
+final chatRepositoryProvider = Provider<ChatRepository>((ref) {
+  return ChatRepository(
+    ref.watch(apiServiceProvider),
+    ref.watch(storageServiceProvider),
+  );
+});
+
 final orderRepositoryProvider = Provider<OrderRepository>((ref) {
   return OrderRepository(ref.watch(apiServiceProvider));
+});
+
+final reservationRepositoryProvider = Provider<ReservationRepository>((ref) {
+  return ReservationRepository(ref.watch(apiServiceProvider));
+});
+
+final voucherRepositoryProvider = Provider<VoucherRepository>((ref) {
+  return VoucherRepository(ref.watch(apiServiceProvider));
+});
+
+final postRepositoryProvider = Provider<PostRepository>((ref) {
+  return PostRepository(ref.watch(apiServiceProvider));
+});
+
+final galleryRepositoryProvider = Provider<GalleryRepository>((ref) {
+  return GalleryRepository(ref.watch(apiServiceProvider));
+});
+
+final pageRepositoryProvider = Provider<PageRepository>((ref) {
+  return PageRepository(ref.watch(apiServiceProvider));
 });
 
 // ============================================================
@@ -124,6 +169,41 @@ final aboutProvider = FutureProvider.autoDispose<AboutData>((ref) async {
   return ref.watch(aboutRepositoryProvider).getAbout();
 });
 
+final publicVouchersProvider =
+    FutureProvider.autoDispose<List<PublicVoucher>>((ref) async {
+  ref.watch(localeProvider);
+  return ref.watch(voucherRepositoryProvider).getPublicVouchers();
+});
+
+final postsProvider =
+    FutureProvider.autoDispose<PagedResponse<PostSummary>>((ref) async {
+  ref.watch(localeProvider);
+  return ref.watch(postRepositoryProvider).getPosts();
+});
+
+final postDetailProvider =
+    FutureProvider.autoDispose.family<PostDetail, String>((ref, slug) async {
+  ref.watch(localeProvider);
+  return ref.watch(postRepositoryProvider).getPost(slug);
+});
+
+final galleryProvider = FutureProvider.autoDispose<GalleryData>((ref) async {
+  ref.watch(localeProvider);
+  return ref.watch(galleryRepositoryProvider).getGallery();
+});
+
+final pagesProvider =
+    FutureProvider.autoDispose<PagedResponse<CmsPageSummary>>((ref) async {
+  ref.watch(localeProvider);
+  return ref.watch(pageRepositoryProvider).getPages();
+});
+
+final pageDetailProvider =
+    FutureProvider.autoDispose.family<CmsPageDetail, String>((ref, slug) async {
+  ref.watch(localeProvider);
+  return ref.watch(pageRepositoryProvider).getPage(slug);
+});
+
 /// Gửi form liên hệ.
 /// Dùng `.family<ContactResponse, ContactRequest>` — key là request object,
 /// nên mỗi request khác nhau sẽ gọi BE (không cache vì ContactResponse
@@ -134,6 +214,11 @@ final aboutProvider = FutureProvider.autoDispose<AboutData>((ref) async {
 final sendContactProvider = FutureProvider.autoDispose
     .family<ContactResponse, ContactRequest>((ref, request) async {
   return ref.watch(contactRepositoryProvider).submit(request);
+});
+
+final subscribeNewsletterProvider = FutureProvider.autoDispose
+    .family<NewsletterResponse, NewsletterRequest>((ref, request) async {
+  return ref.watch(newsletterRepositoryProvider).subscribe(request);
 });
 
 // ============================================================
@@ -265,6 +350,23 @@ final cartCountProvider = Provider<int>((ref) {
 final createOrderProvider = FutureProvider.autoDispose
     .family<OrderResponse, CreateOrderRequest>((ref, request) async {
   return ref.watch(orderRepositoryProvider).createOrder(request);
+});
+
+final startChatProvider = FutureProvider.autoDispose
+    .family<ChatSessionResponse, StartChatRequest>((ref, request) async {
+  return ref.watch(chatRepositoryProvider).start(request);
+});
+
+final reservationAvailabilityProvider = FutureProvider.autoDispose
+    .family<ReservationAvailabilityResponse, ReservationAvailabilityRequest>(
+        (ref, request) async {
+  ref.watch(localeProvider);
+  return ref.watch(reservationRepositoryProvider).checkAvailability(request);
+});
+
+final createReservationProvider = FutureProvider.autoDispose
+    .family<ReservationResponse, CreateReservationRequest>((ref, request) async {
+  return ref.watch(reservationRepositoryProvider).createReservation(request);
 });
 
 // ============================================================

@@ -87,6 +87,29 @@ class OrderSuccessScreen extends StatelessWidget {
                               if (total != null)
                                 _InfoRow(label: 'Tổng tạm tính', value: _formatPrice(total!)),
                               const SizedBox(height: 18),
+                              SizedBox(
+                                width: double.infinity,
+                                child: FilledButton.icon(
+                                  onPressed: () {
+                                    context.showPageLoader();
+                                    context.go(AppRoutes.orderTrackingPath(code));
+                                  },
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: AppColors.primary,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(vertical: 13),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                  ),
+                                  icon: const Icon(Icons.local_shipping_outlined),
+                                  label: const Text(
+                                    'Theo dõi đơn',
+                                    style: TextStyle(fontWeight: FontWeight.w900),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 10),
                               Row(
                                 children: [
                                   Expanded(

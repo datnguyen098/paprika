@@ -47,6 +47,7 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
   }
 
   Future<void> _submit() async {
+    FocusManager.instance.primaryFocus?.unfocus();
     // 1. Clear previous errors
     setState(() => _fieldErrors.clear());
 
@@ -175,11 +176,14 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.cream,
-      body: Column(
-        children: [
-          const PaprikaHeader(),
-          Expanded(
-            child: SingleChildScrollView(
+      body: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+        child: Column(
+          children: [
+            const PaprikaHeader(),
+            Expanded(
+              child: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -366,9 +370,10 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
                   const PaprikaFooter(),
                 ],
               ),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
       bottomNavigationBar: const BottomNavBar(),
     );

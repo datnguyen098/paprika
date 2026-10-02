@@ -67,6 +67,74 @@ class OrderLookupTest extends TestCase
             ->assertSee($order->code);
     }
 
+    public function test_api_can_lookup_orders_by_code_and_track_timeline(): void
+    {
+        $order = Order::create([
+            'code' => 'API-'.Str::upper(Str::random(8)),
+            'customer_name' => 'API Customer',
+            'customer_phone' => '0912345678',
+            'customer_email' => 'api-customer@example.com',
+            'fulfillment_method' => 'pickup',
+            'status' => 'preparing',
+            'payment_method' => 'offline',
+            'payment_status' => 'unpaid',
+            'subtotal' => 1900,
+            'shipping_fee' => 0,
+            'discount_total' => 0,
+            'total' => 1900,
+            'locale' => 'vi',
+        ]);
+
+        $order->items()->create([
+            'dish_name' => 'Pho Bo',
+            'base_unit_price' => 1900,
+            'options_total' => 0,
+            'unit_price' => 1900,
+            'quantity' => 1,
+            'line_total' => 1900,
+        ]);
+
+        $this->getJson('/api/v1/orders/lookup?query='.$order->code)
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.0.code', $order->code)
+            ->assertJsonPath('data.0.items.0.dish_name', 'Pho Bo');
+
+        $this->getJson("/api/v1/orders/{$order->code}")
+            ->assertOk()
+            ->assertJsonPath('data.code', $order->code)
+            ->assertJsonPath('data.status', 'preparing');
+
+        $this->getJson("/api/v1/orders/{$order->code}/track")
+            ->assertOk()
+            ->assertJsonPath('data.order.code', $order->code)
+            ->assertJsonPath('data.timeline.2.status', 'preparing')
+            ->assertJsonPath('data.timeline.2.current', true);
+    }
+
+    public function test_api_lookup_matches_formatted_phone_numbers(): void
+    {
+        $order = Order::create([
+            'code' => 'API-'.Str::upper(Str::random(8)),
+            'customer_name' => 'Formatted Phone Customer',
+            'customer_phone' => '+30 691 234 5678',
+            'customer_email' => 'formatted-phone@example.com',
+            'fulfillment_method' => 'pickup',
+            'status' => 'pending',
+            'payment_method' => 'offline',
+            'payment_status' => 'unpaid',
+            'subtotal' => 1000,
+            'shipping_fee' => 0,
+            'discount_total' => 0,
+            'total' => 1000,
+            'locale' => 'vi',
+        ]);
+
+        $this->getJson('/api/v1/orders/lookup?query=306912345678')
+            ->assertOk()
+            ->assertJsonPath('data.0.code', $order->code);
+    }
+
     public function test_lookup_without_matches_does_not_show_unrelated_orders(): void
     {
         $order = Order::create([

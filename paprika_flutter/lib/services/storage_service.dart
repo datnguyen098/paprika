@@ -18,8 +18,10 @@ class StorageService {
   static const String _kLocale = 'app_locale';
   static const String _kActiveBranchId = 'active_branch_id';
   static const String _kCartSessionId = 'cart_session_id';
+  static const String _kChatSessionId = 'chat_session_id';
   static const String _kOnboardingDone = 'onboarding_done';
   static const String _kWebOrigin = 'web_origin';
+  static const String _kUserAllergens = 'user_allergens';
 
   // ==================== Auth Token ====================
   Future<void> setToken(String? token) async {
@@ -114,6 +116,17 @@ class StorageService {
     await _prefs.setString(_kCartSessionId, id);
   }
 
+  // ==================== Chat Session ====================
+  String? getChatSessionId() => _prefs.getString(_kChatSessionId);
+
+  Future<void> setChatSessionId(String? id) async {
+    if (id == null || id.isEmpty) {
+      await _prefs.remove(_kChatSessionId);
+      return;
+    }
+    await _prefs.setString(_kChatSessionId, id);
+  }
+
   // ==================== Onboarding ====================
   bool getOnboardingDone() => _prefs.getBool(_kOnboardingDone) ?? false;
 
@@ -134,6 +147,26 @@ class StorageService {
       return;
     }
     await _prefs.setString(_kWebOrigin, origin);
+  }
+
+  // ==================== Allergen Preferences ====================
+  List<String> getUserAllergens() =>
+      List.unmodifiable(_prefs.getStringList(_kUserAllergens) ?? const []);
+
+  Future<void> setUserAllergens(Iterable<String> allergens) async {
+    final normalized = allergens
+        .map((value) => value.trim().toLowerCase())
+        .where((value) => value.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort();
+
+    if (normalized.isEmpty) {
+      await _prefs.remove(_kUserAllergens);
+      return;
+    }
+
+    await _prefs.setStringList(_kUserAllergens, normalized);
   }
 
   // ==================== Reset ====================

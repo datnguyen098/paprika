@@ -215,7 +215,7 @@ class HomeController extends Controller
     private function gallery(): array
     {
         return GalleryImage::query()
-            ->with(['translations', 'branch.translations'])
+            ->with(['translations', 'branch'])
             ->active()
             ->orderByDesc('is_featured')
             ->orderBy('sort_order')
@@ -229,7 +229,7 @@ class HomeController extends Controller
                     'title'    => $g->localized('title'),
                     'alt_text' => $g->localized('alt_text'),
                     'image'    => media_url($g->image),
-                    'branch'   => $branch ? ['name' => $branch->localized('name')] : null,
+                    'branch'   => $branch ? ['name' => localized_field($branch, 'name', $branch->name)] : null,
                 ];
             })
             ->values()

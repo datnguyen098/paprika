@@ -622,6 +622,9 @@ class _DishCard extends StatelessWidget {
     final l = AppLocalizations.of(context);
     final hasDiscount = dish.hasDiscount;
     final finalPrice = dish.currentPrice;
+    final availabilityLabel = dish.availabilityLabel?.trim();
+    final hasAvailabilityLabel =
+        availabilityLabel != null && availabilityLabel.isNotEmpty;
 
     return Container(
       decoration: BoxDecoration(
@@ -697,7 +700,31 @@ class _DishCard extends StatelessWidget {
                               ),
                             ),
                           ),
-                        if (!dish.isAvailable)
+                        if (hasAvailabilityLabel)
+                          Positioned(
+                            top: 8,
+                            right: 8,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF9A4F05),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                availabilityLabel.toUpperCase(),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 0.1,
+                                ),
+                              ),
+                            ),
+                          ),
+                        if (!dish.isAvailable && !hasAvailabilityLabel)
                           Positioned.fill(
                             child: Container(
                               color: Colors.black.withValues(alpha: 0.45),

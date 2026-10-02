@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../app/routes.dart';
 import '../core/constants/app_colors.dart';
@@ -57,8 +56,7 @@ class _DishDetailScreenState extends ConsumerState<DishDetailScreen> {
   }
 
   Future<void> _loadUserAllergens() async {
-    final prefs = await SharedPreferences.getInstance();
-    final saved = prefs.getStringList('user_allergens') ?? const [];
+    final saved = ref.read(storageServiceProvider).getUserAllergens();
     if (!mounted) return;
     setState(() => _userAllergens = _normalizeAllergenKeys(saved).toSet());
   }
@@ -73,8 +71,7 @@ class _DishDetailScreenState extends ConsumerState<DishDetailScreen> {
       next.add(normalized);
     }
 
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList('user_allergens', next.toList());
+    await ref.read(storageServiceProvider).setUserAllergens(next);
     if (!mounted) return;
     setState(() => _userAllergens = next);
   }

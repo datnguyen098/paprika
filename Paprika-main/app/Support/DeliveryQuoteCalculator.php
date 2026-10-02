@@ -46,11 +46,12 @@ class DeliveryQuoteCalculator
             return new DeliveryQuote(
                 false,
                 message: 'Đơn giao hàng tối thiểu '.format_money((int) $branch->delivery_min_order_amount).'.',
-                messageKey: 'site.delivery_quote.min_order_amount'
+                messageKey: 'site.delivery_quote.min_order_amount',
+                messageParams: ['amount' => format_money((int) $branch->delivery_min_order_amount)]
             );
         }
 
-        if (! $branch->auto_delivery_quote_enabled) {
+        if (! $branch->auto_delivery_quote_enabled && $distanceKm === null) {
             return new DeliveryQuote(
                 true,
                 distanceKm: $distanceKm,
